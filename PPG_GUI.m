@@ -40,6 +40,7 @@ classdef PPG_GUI < handle
         CR_LF_EN = 0;
         PLOTTER_EN = 1;
         DATA_TO_PLOT = 0;
+        SHOW_ASCII = 1;     % 1 = show BYTE as ASCII, 0 = show Numbers as charstring 
         
         %COM FLAGS:
         ASCII_CR = 0;
@@ -82,10 +83,12 @@ classdef PPG_GUI < handle
                     'ButtonPushedFcn', @(~,~) (dscnnctSerial(obj)));
 
             obj.txa_outputWindow = uitextarea(obj.fig,...
-                    'Position',[10, 50, 440, 250]);
-
-            obj.txa_inputForm = uitextarea(obj.fig,...
-                    'Position', [10,10,330,25]);
+                    'Position',[10, 50, 440, 250],...
+                    'ValueChangedFcn', @(~,~) (txa_outScrollBtm(obj)));
+                
+            obj.txa_inputForm = uieditfield(obj.fig,'text',...
+                    'Position', [10,10,330,25],...
+                    'ValueChangedFcn', @(~,~) (sendMsgSerial(obj)));
             
 
             obj.btn_sendMsg = uibutton(obj.fig,...
@@ -140,40 +143,10 @@ classdef PPG_GUI < handle
             end
 
         end
-        %% Serial COM
-        function portSelect(obj)
-            obj.dd_selPort.Items = seriallist('available');
-        end
+        
+        
+          
       
-        function sendMsgSerial(obj)
-            %if s.status == 'open' 
-                if obj.txa_inputForm.Value{1} ~= 0
-                    %fwrite(obj.s,obj.txa_inputForm.Value{1},'uint8');
-                    writeline(obj.s,obj.txa_inputForm.Value{1});
-                end 
-                obj.txa_inputForm.Value{1} = '';
-            %end
-        end
-
-        function cnnctSerial(obj)
-            
-            obj.s = serialport(obj.dd_selPort.Value,obj.dd_selBAUD.Value);
-            %Button has to be disabled to prevent multiple portopenings
-            obj.btn_cnnctPort.Enable = 0;
-            %fopen(obj.s);
-            configureCallback(obj.s,"byte",1, @(~, ~) (msgRCV(obj)));
-            configureTerminator(obj.s,"CR/LF");
-            
-
-        end
-        function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
-            %fclose(obj.s);
-            obj.s = 0;
-            %Connect Button enabled again after successfull port closing
-            obj.btn_cnnctPort.Enable = 1;
-        end
-        
-        
         function plotData(obj)
             % calculating x-achsis Label : first Data at x = 0
             obj.x = ((obj.n_xAxis - obj.Buffersize + 1) : obj.n_xAxis);
@@ -184,9 +157,63 @@ classdef PPG_GUI < handle
             obj.ax_plot.XLim = [(obj.n_xAxis - obj.Buffersize + 1) obj.n_xAxis];
         end
         
+        
+        
+        %% Serial COM
+        
+        
+      
+        
+        % refresh Portselect Dropdown menu Items on click
+        function portSelect(obj)
+            obj.dd_selPort.Items = seriallist('available');
+        end
+      
+        function sendMsgSerial(obj)
+            %if s.status == 'open' 
+                if obj.txa_inputForm.Value ~= 0
+                    %fwrite(obj.s,obj.txa_inputForm.Value{1},'uint8');
+                    writeline(obj.s,obj.txa_inputForm.Value);
+                end 
+                obj.txa_inputForm.Value = '';
+            %end
+        end
+
+        function cnnctSerial(obj)
+            
+            obj.s = serialport(obj.dd_selPort.Value,obj.dd_selBAUD.Value);
+            %Button has to be disabled to prevent multiple portopenings
+            obj.btn_cnnctPort.Enable = 0;
+            obj.btn_dscnnctPort.Enable = 1;
+            %fopen(obj.s);
+            configureCallback(obj.s,"byte",1, @(~, ~) (msgRCV(obj)));
+            configureTerminator(obj.s,"CR/LF");
+            
+            %put Connect Messag to Outputform
+            obj.txa_outputWindowText{obj.txa_outputWindowIndex} = 'Verbunden mit:';
+            obj.txa_outputWindowText{obj.txa_outputWindowIndex} = strcat(obj.txa_outputWindowText{obj.txa_outputWindowIndex}, obj.dd_selPort.Value);
+            
+            %newline
+            obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1;
+            
+           
+        end
+        function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
+            %fclose(obj.s);
+            obj.s = 0;
+            %Connect Button enabled again after successfull port closing
+            obj.btn_cnnctPort.Enable = 1;
+            obj.btn_dscnnctPort.Enable = 0;
+        end
+        
+        
+
+        
         function msgRCV(obj)
             msg = read(obj.s,1,"uint8");
-            msgChar = char(msg);
+            if obj.SHOW_ASCII == 1 
+                msgChar = char(msg);
+            end
             
             % Make int32 from multiple Databytes
             if (obj.HEADER == obj.DATA_BYTE) 
@@ -253,6 +280,8 @@ classdef PPG_GUI < handle
             end
             obj.txa_outputWindow.Value = obj.txa_outputWindowText;
             
+            %scroll to bottom
+            scroll(obj.txa_outputWindow,'bottom');
         end
         
     end
