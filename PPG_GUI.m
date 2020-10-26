@@ -135,6 +135,7 @@ classdef PPG_GUI < handle
 
                     % close Port when figure gets closed
                     %fclose(obj.s);
+                    obj.s = 0;
                     delete(obj.fig)
 
 
