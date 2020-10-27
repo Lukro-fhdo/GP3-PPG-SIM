@@ -17,6 +17,9 @@ classdef PPG_GUI < handle
         btn_dscnnctPort;
         btn_sendMsg;
         
+        % Checkboxes
+        cb_showASCII;
+        
         % Textfields
         txa_outputWindow;
         txa_outputWindowText = {};
@@ -31,9 +34,12 @@ classdef PPG_GUI < handle
         %Data Buffer
         
         tmp_Buffer = int32(0);
+        asc_buffer = [];
         Buffersize = 256;
         Buffer;
-        numBytes = 0;        
+        numBytes = 0;
+        ASCII_ARR = {};
+        NUM_ARR = {};
         
         
         %GUI FLAGS:
@@ -81,6 +87,10 @@ classdef PPG_GUI < handle
                     'Position',[340,350,100,25],...
                     'Text','Disconnect',...
                     'ButtonPushedFcn', @(~,~) (dscnnctSerial(obj)));
+            obj.cb_showASCII = uicheckbox(obj.fig,...
+                            'Position',[450,350,100,25],...
+                            'Text','show ASCII',...
+                            'Value',0);
 
             obj.txa_outputWindow = uitextarea(obj.fig,...
                     'Position',[10, 50, 440, 250],...
@@ -144,9 +154,6 @@ classdef PPG_GUI < handle
             end
 
         end
-        
-        
-          
       
         function plotData(obj)
             % calculating x-achsis Label : first Data at x = 0
@@ -161,9 +168,6 @@ classdef PPG_GUI < handle
         
         
         %% Serial COM
-        
-        
-      
         
         % refresh Portselect Dropdown menu Items on click
         function portSelect(obj)
@@ -191,12 +195,11 @@ classdef PPG_GUI < handle
             configureTerminator(obj.s,"CR/LF");
             
             %put Connect Messag to Outputform
-            obj.txa_outputWindowText{obj.txa_outputWindowIndex} = 'Verbunden mit:';
-            obj.txa_outputWindowText{obj.txa_outputWindowIndex} = strcat(obj.txa_outputWindowText{obj.txa_outputWindowIndex}, obj.dd_selPort.Value);
-            
-            %newline
-            obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1;
-            
+            str_temp = 'Verbunden mit: ';
+            obj.ASCII_ARR{1} = sprintf('%s %s',...
+                str_temp, obj.dd_selPort.Value); 
+            obj.NUM_ARR{1} = sprintf('%s %s',...
+                str_temp, obj.dd_selPort.Value);  
            
         end
         function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
@@ -206,19 +209,14 @@ classdef PPG_GUI < handle
             obj.btn_cnnctPort.Enable = 1;
             obj.btn_dscnnctPort.Enable = 0;
         end
-        
-        
-
-        
+  
         function msgRCV(obj)
-            msg = read(obj.s,1,"uint8");
-            if obj.SHOW_ASCII == 1 
-                msgChar = char(msg);
-            end
-            
+            msg = read(obj.s,1,"uint8");                        
+               
             % Make int32 from multiple Databytes
             if (obj.HEADER == obj.DATA_BYTE) 
                 obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
+                obj.asc_buffer(obj.numBytes+1) = char(msg);
                 obj.numBytes = obj.numBytes + 1;
                 
                 % Payload on Data max. 4 Bytes --> break
@@ -233,7 +231,7 @@ classdef PPG_GUI < handle
                 end
             end
             
-            % Check for Protocol Data
+           % Check for Protocol Data
             % Set Flags if receive byte ist Protocol startbyte
             if obj.HEADER == 0
                 switch msg 
@@ -246,40 +244,38 @@ classdef PPG_GUI < handle
                     case 0x0D
                         obj.ASCII_CR = 1;   % CR Flag = 1
                 end
-            
-                  
-                if ((msg == 0x0A && obj.ASCII_CR == 1) || (obj.CR_LF_EN == 1))
-                    obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1; %New Line
-                    obj.ASCII_CR = 0;   % Reset CR Flag
+            end
+  
+            if ((msg == 0x0A && obj.ASCII_CR == 1) || (obj.CR_LF_EN == 1))
+                obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1; %New Line
+                obj.ASCII_CR = 0;   % Reset CR Flag
 
-                    %plot Data
-                    if obj.DATA_TO_PLOT ==1
-                        %shift whole array left
-                        obj.Buffer = circshift(obj.Buffer,-1);
-                        %overwrite last data on last array index (data filled in leftside)
-                        obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;
-                        %increment sample counter
-                        obj.n_xAxis = obj.n_xAxis + 1;
-                        %reassign helpervars = 0
-                        obj.DATA_TO_PLOT = 0;
-                        obj.tmp_Buffer = 0;
+                %plot Data
+                if obj.DATA_TO_PLOT ==1
+                    %shift whole array left
+                    obj.Buffer = circshift(obj.Buffer,-1);
+                    %overwrite last data on last array index (data filled in leftside)
+                    obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;
+                    obj.NUM_ARR{end+1} = num2str(obj.tmp_Buffer);
+                    obj.ASCII_ARR{end+1} = num2str(obj.asc_buffer);
+                    
+                    %increment sample counter
+                    obj.n_xAxis = obj.n_xAxis + 1;
+                    %reassign helpervars = 0
+                    obj.DATA_TO_PLOT = 0;
+                    obj.tmp_Buffer = 0;
+                    obj.asc_buffer = [];
 
-                        % call plotfunction if enabled
-                        plotData(obj);
-                    end
+                    % call plotfunction if enabled
+                    plotData(obj);
                 end
             end
-            
-             
-            
-            %write rcvd msg to messagebo screenbuffer
-            if (size(obj.txa_outputWindowText) < obj.txa_outputWindowIndex)
-                obj.txa_outputWindowText{obj.txa_outputWindowIndex} = msgChar;
+
+            if(obj.cb_showASCII.Value == 1)
+                obj.txa_outputWindow.Value = obj.ASCII_ARR;
             else
-                %temp_cell_array = 
-                obj.txa_outputWindowText{obj.txa_outputWindowIndex} = strcat(obj.txa_outputWindowText{obj.txa_outputWindowIndex}, msgChar);
+                obj.txa_outputWindow.Value = obj.NUM_ARR;
             end
-            obj.txa_outputWindow.Value = obj.txa_outputWindowText;
             
             %scroll to bottom
             scroll(obj.txa_outputWindow,'bottom');
