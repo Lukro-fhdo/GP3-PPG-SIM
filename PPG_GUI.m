@@ -8,6 +8,7 @@ classdef PPG_GUI < handle
         
         % GUI Elements:
         
+        
         % Dropdownmenues
         dd_selPort;
         dd_selBAUD;
@@ -16,6 +17,7 @@ classdef PPG_GUI < handle
         btn_cnnctPort;
         btn_dscnnctPort;
         btn_sendMsg;
+        btn_sendData;
         
         % Checkboxes
         cb_showASCII;
@@ -41,12 +43,18 @@ classdef PPG_GUI < handle
         ASCII_ARR = {};
         NUM_ARR = {};
         
+        %SignalFiles
+        signalPath = 'signaldata/Data01.mat' ;
+        signalData = {};
+        signalLength ;
+      
         
         %GUI FLAGS:
         CR_LF_EN = 0;
         PLOTTER_EN = 1;
         DATA_TO_PLOT = 0;
         SHOW_ASCII = 1;     % 1 = show BYTE as ASCII, 0 = show Numbers as charstring 
+        SEND_DATA = 1;      
         
         %COM FLAGS:
         ASCII_CR = 0;
@@ -106,8 +114,14 @@ classdef PPG_GUI < handle
                     'Text','Send',...
                     'ButtonPushedFcn', @(~, ~) (sendMsgSerial(obj)));
                 
+            obj.btn_sendData = uibutton(obj.fig,...
+                    'Position',[500,350,100,25],...
+                    'Text','Send Data',...
+                    'ButtonPushedFcn', @(~,~) (sendData(obj)));
+
+                
             obj.ax_plot = uiaxes(obj.fig,...
-                    'Position', [470,50,440,250]);
+                    'Position', [500,50,440,250]);
                 
         end
         
@@ -280,6 +294,27 @@ classdef PPG_GUI < handle
             %scroll to bottom
             scroll(obj.txa_outputWindow,'bottom');
         end
+        
+        function sendData(obj)
+            if obj.SEND_DATA == 1
+                %check for Data
+                if exist(obj.signalPath,'file') == 2
+                    %load signal Data from mat-file
+                    obj.signalData = struct2array(load(obj.signalPath));
+                    obj.signalLength = height(obj.signalData);
+                    
+                    %put load successfull msg to outputform
+                    %put Connect Messag to Outputform
+                    obj.txa_outputWindowText{obj.txa_outputWindowIndex} = obj.signalPath;
+                    obj.txa_outputWindowText{obj.txa_outputWindowIndex} = strcat(' wurde geladen');
+
+                    %newline
+                    obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1;
+                    obj.txa_outputWindow.Value = obj.txa_outputWindowText;
+                end
+            end
+        end
+      
         
     end
 end
