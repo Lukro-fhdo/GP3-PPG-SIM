@@ -151,7 +151,6 @@ classdef PPG_GUI < handle
         %% GUI Callbackfunctions
         
         function my_closereq(obj)
-
             selection = uiconfirm(obj.fig,'Close the figure window?',...
                 'Confirmation');
 
@@ -167,7 +166,6 @@ classdef PPG_GUI < handle
                 case 'Cancel'
                     return
             end
-
         end
       
         function plotData(obj)
@@ -179,9 +177,7 @@ classdef PPG_GUI < handle
             
             obj.ax_plot.XLim = [(obj.n_xAxis - obj.Buffersize + 1) obj.n_xAxis];
         end
-        
-        
-        
+                
         %% Serial COM
         
         % refresh Portselect Dropdown menu Items on click
@@ -199,8 +195,7 @@ classdef PPG_GUI < handle
             %end
         end
 
-        function cnnctSerial(obj)
-            
+        function cnnctSerial(obj)            
             obj.s = serialport(obj.dd_selPort.Value,obj.dd_selBAUD.Value);
             %Button has to be disabled to prevent multiple portopenings
             obj.btn_cnnctPort.Enable = 0;
@@ -217,21 +212,31 @@ classdef PPG_GUI < handle
                 str_temp, obj.dd_selPort.Value);  
            
         end
+        
         function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
             %fclose(obj.s);
             obj.s = 0;
             %Connect Button enabled again after successfull port closing
             obj.btn_cnnctPort.Enable = 1;
             obj.btn_dscnnctPort.Enable = 0;
+            
+            % clear buffers
+            obj.NUM_ARR = [];
+            obj.ASCII_ARR = {};
         end
   
         function msgRCV(obj)
-            msg = read(obj.s,1,"uint8");                        
-               
-            % Make int32 from multiple Databytes
-            if (obj.HEADER == obj.DATA_BYTE) 
+            msg = read(obj.s,1,"uint8");
+                      
+            % Make int32 from multiple Databytes            
+            if (obj.HEADER == obj.DATA_BYTE)                
                 obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
-                obj.asc_buffer(obj.numBytes+1) = char(msg);
+                
+                if obj.numBytes == 0
+                  obj.asc_buffer(end+1) = 0x12;  
+                end
+                
+                obj.asc_buffer(end+1) = msg;
                 obj.numBytes = obj.numBytes + 1;
                 
                 % Payload on Data max. 4 Bytes --> break
@@ -248,22 +253,29 @@ classdef PPG_GUI < handle
             
            % Check for Protocol Data
             % Set Flags if receive byte ist Protocol startbyte
-            if obj.HEADER == 0
+            if obj.HEADER == 0                
                 switch msg 
                     case 0x11
                         obj.HEADER = obj.CTRL_BYTE;
+                        obj.HEADER = 0;
+                        obj.ASCII_ARR{end+1} = sprintf('%02X', 0x11);
                     case 0x12
                         obj.HEADER = obj.DATA_BYTE;
                     case 0x13
                         obj.HEADER = obj.ERROR_BYTE;
+                        obj.HEADER = 0;
+                        obj.ASCII_ARR{end+1} = sprintf('%02X', 0x13);
                     case 0x0D
                         obj.ASCII_CR = 1;   % CR Flag = 1
-                end
-            end
+                end                
+            end            
   
             if ((msg == 0x0A && obj.ASCII_CR == 1) || (obj.CR_LF_EN == 1))
-                obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1; %New Line
-                obj.ASCII_CR = 0;   % Reset CR Flag
+                
+                obj.asc_buffer(end+1) = 0x0D;
+                obj.asc_buffer(end+1) = 0x0A;
+                
+                obj.ASCII_CR = 0;  % Reset CR Flag
 
                 %plot Data
                 if obj.DATA_TO_PLOT ==1
@@ -271,8 +283,8 @@ classdef PPG_GUI < handle
                     obj.Buffer = circshift(obj.Buffer,-1);
                     %overwrite last data on last array index (data filled in leftside)
                     obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;
-                    obj.NUM_ARR{end+1} = num2str(obj.tmp_Buffer);
-                    obj.ASCII_ARR{end+1} = num2str(obj.asc_buffer);
+                    obj.NUM_ARR{end+1} = num2str(obj.tmp_Buffer);                    
+                    obj.ASCII_ARR{end+1} = sprintf('%02X %02X %02X %02X %02X %02X %02X %02X', obj.asc_buffer);
                     
                     %increment sample counter
                     obj.n_xAxis = obj.n_xAxis + 1;
