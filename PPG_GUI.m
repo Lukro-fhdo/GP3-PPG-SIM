@@ -46,8 +46,11 @@ classdef PPG_GUI < handle
         %SignalFiles
         signalPath = 'signaldata/Data01.mat' ;
         signalData = {};
+        signalDataIndex = 1;
         signalLength ;
-      
+        signalFs = 50; %Samplefrequenz = 30Hz   
+        
+        signaltimer;
         
         %GUI FLAGS:
         CR_LF_EN = 0;
@@ -204,7 +207,7 @@ classdef PPG_GUI < handle
             configureCallback(obj.s,"byte",1, @(~, ~) (msgRCV(obj)));
             configureTerminator(obj.s,"CR/LF");
             
-            %put Connect Messag to Outputform
+            %put Connect Message to Outputform
             str_temp = 'Verbunden mit: ';
             obj.ASCII_ARR{1} = sprintf('%s %s',...
                 str_temp, obj.dd_selPort.Value); 
@@ -310,23 +313,98 @@ classdef PPG_GUI < handle
         
         function sendData(obj)
             if obj.SEND_DATA == 1
-                %check for Data
+                if loadFile(obj) == 1
+                    
+                    %configure signal timer for fixed samplerate
+                    %transmission
+                    obj.signaltimer = timer('Period',1/obj.signalFs,...
+                        'TasksToExecute', Inf,'ExecutionMode','fixedRate');
+                    %configure timer callback
+                    obj.signaltimer.TimerFcn = @(~,~) putSample(obj);
+                    start(obj.signaltimer);
+                    
+                    obj.SEND_DATA = 0;
+                    obj.btn_sendData.Text = 'Stop';
+                    obj.signalDataIndex = 1;
+                else
+                    % ToDo Error Message
+                end
+            else
+                stop(obj.signaltimer);
+                %reset button
+                obj.SEND_DATA = 1;
+                obj.btn_sendData.Text = 'Send Data';
+            end
+        end
+        function putSample(obj)
+            %check for arrayindex overflow
+            if obj.signalDataIndex > obj.signalLength
+                %reset transmission parameter
+                stop(t);
+                obj.signalDataIndex = 1;
+                obj.btn_sendData.Text = 'Stop';
+            else
+                temp = table2array(obj.signalData(obj.signalDataIndex,1));
+                
+                %write seperated Databytes Highbyte to Lowbyte
+                tempbyte = uint8(bitsrl(int32(temp),24));
+                write(obj.s,tempbyte,"uint8");
+                
+                tempbyte = uint8(bitsrl(int32(temp),16));
+                write(obj.s,tempbyte,"uint8");
+                
+                tempbyte = uint8(bitsrl(int32(temp),8));
+                write(obj.s,tempbyte,"uint8");
+                
+                tempbyte = uint8(bitand(int32(temp), int32(0x000000FF)));
+                writeline(obj.s,char(tempbyte) );
+                
+                %increment Data Indice
+                obj.signalDataIndex = obj.signalDataIndex + 1;
+                
+            end
+        
+        end
+        
+        function status = loadFile(obj)
+            %check for Data
                 if exist(obj.signalPath,'file') == 2
                     %load signal Data from mat-file
                     obj.signalData = struct2array(load(obj.signalPath));
                     obj.signalLength = height(obj.signalData);
                     
-                    %put load successfull msg to outputform
-                    %put Connect Messag to Outputform
-                    obj.txa_outputWindowText{obj.txa_outputWindowIndex} = obj.signalPath;
-                    obj.txa_outputWindowText{obj.txa_outputWindowIndex} = strcat(' wurde geladen');
-
-                    %newline
-                    obj.txa_outputWindowIndex = obj.txa_outputWindowIndex + 1;
-                    obj.txa_outputWindow.Value = obj.txa_outputWindowText;
+                    %put Load successfull Message to Outputform
+                    str_temp = ' wurde geladen';
+                    obj.ASCII_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
+                    obj.NUM_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
+                    
+                    if(obj.cb_showASCII.Value == 1)
+                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
+                    else
+                        obj.txa_outputWindow.Value = obj.NUM_ARR;
+                    end
+                    status = 1;
+                else
+                    %put Load unsuccessfull Message to Outputform
+                    str_temp = ' wurde nicht gefunden';
+                    obj.ASCII_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
+                    obj.NUM_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
+                    
+                    if(obj.cb_showASCII.Value == 1)
+                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
+                    else
+                        obj.txa_outputWindow.Value = obj.NUM_ARR;
+                    end
+                    status = 0;
                 end
-            end
+                 
+        
         end
+        
       
         
     end
