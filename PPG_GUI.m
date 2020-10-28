@@ -235,10 +235,6 @@ classdef PPG_GUI < handle
             if (obj.HEADER == obj.DATA_BYTE)                
                 obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
                 
-                if obj.numBytes == 0
-                  obj.asc_buffer(end+1) = 0x12;  
-                end
-                
                 obj.asc_buffer(end+1) = msg;
                 obj.numBytes = obj.numBytes + 1;
                 
@@ -261,13 +257,14 @@ classdef PPG_GUI < handle
                     case 0x11
                         obj.HEADER = obj.CTRL_BYTE;
                         obj.HEADER = 0;
-                        obj.ASCII_ARR{end+1} = sprintf('%02X', 0x11);
+                        obj.asc_buffer(end+1) = 0x11;
                     case 0x12
                         obj.HEADER = obj.DATA_BYTE;
+                        obj.asc_buffer(end+1) = 0x12;
                     case 0x13
                         obj.HEADER = obj.ERROR_BYTE;
                         obj.HEADER = 0;
-                        obj.ASCII_ARR{end+1} = sprintf('%02X', 0x13);
+                        obj.asc_buffer(end+1) = 0x13;
                     case 0x0D
                         obj.ASCII_CR = 1;   % CR Flag = 1
                 end                
@@ -278,6 +275,16 @@ classdef PPG_GUI < handle
                 obj.asc_buffer(end+1) = 0x0D;
                 obj.asc_buffer(end+1) = 0x0A;
                 
+                obj.NUM_ARR{end+1} = sprintf('%d', obj.tmp_Buffer); 
+                
+                str_buffer = [];
+                for k = 1 : length(obj.asc_buffer)
+                    str = sprintf("%02X ",obj.asc_buffer(k));
+                    str_buffer = strcat(str_buffer,str);
+                end
+                                
+                obj.ASCII_ARR{end+1} = sprintf('%s',str_buffer);
+                
                 obj.ASCII_CR = 0;  % Reset CR Flag
 
                 %plot Data
@@ -285,9 +292,7 @@ classdef PPG_GUI < handle
                     %shift whole array left
                     obj.Buffer = circshift(obj.Buffer,-1);
                     %overwrite last data on last array index (data filled in leftside)
-                    obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;
-                    obj.NUM_ARR{end+1} = num2str(obj.tmp_Buffer);                    
-                    obj.ASCII_ARR{end+1} = sprintf('%02X %02X %02X %02X %02X %02X %02X %02X', obj.asc_buffer);
+                    obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;                    
                     
                     %increment sample counter
                     obj.n_xAxis = obj.n_xAxis + 1;
