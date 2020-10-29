@@ -76,7 +76,7 @@ classdef PPG_GUI < handle
             obj.fig = uifigure('Name','Serialinterface - PPG Simulator',...
                      'Position', [100 100 1000 400]);
             
-            obj.signalFileListing = dir('signaldata');     
+            obj.signalFileListing = dir('signaldata/*.mat');     
                  
             % set callback for closerequest
             figure = obj.fig;
@@ -381,6 +381,7 @@ classdef PPG_GUI < handle
         
         function status = loadFile(obj)
             %check for Data
+            obj.signalPath = append('signaldata/',obj.dd_selSignalFile.Value);
                 if exist(obj.signalPath,'file') == 2
                     %load signal Data from mat-file
                     obj.signalData = struct2array(load(obj.signalPath));
