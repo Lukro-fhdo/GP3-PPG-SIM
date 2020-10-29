@@ -12,6 +12,7 @@ classdef PPG_GUI < handle
         % Dropdownmenues
         dd_selPort;
         dd_selBAUD;
+        dd_selSignalFile;
         
         % Buttons
         btn_cnnctPort;
@@ -44,6 +45,7 @@ classdef PPG_GUI < handle
         NUM_ARR = {};
         
         %SignalFiles
+        signalFileListing;
         signalPath = 'signaldata/Data01.mat' ;
         signalData = {};
         signalDataIndex = 1;
@@ -74,6 +76,8 @@ classdef PPG_GUI < handle
             obj.fig = uifigure('Name','Serialinterface - PPG Simulator',...
                      'Position', [100 100 1000 400]);
             
+            obj.signalFileListing = dir('signaldata');     
+                 
             % set callback for closerequest
             figure = obj.fig;
             figure.CloseRequestFcn = @(figure,event)obj.my_closereq();
@@ -122,6 +126,10 @@ classdef PPG_GUI < handle
                     'Position',[540,350,100,25],...
                     'Text','Send Data',...
                     'ButtonPushedFcn', @(~,~) (sendData(obj)));
+                
+            obj.dd_selSignalFile = uidropdown(obj.fig,...
+                    'Position',[650 350 200 25],...
+                    'Items', {obj.signalFileListing.name});
 
                 
             obj.ax_plot = uiaxes(obj.fig,...
