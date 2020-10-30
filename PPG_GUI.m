@@ -22,6 +22,7 @@ classdef PPG_GUI < handle
         
         % Checkboxes
         cb_showASCII;
+        cb_showSend;
         
         % Textfields
         txa_outputWindow;
@@ -59,7 +60,8 @@ classdef PPG_GUI < handle
         PLOTTER_EN = 1;
         DATA_TO_PLOT = 0;
         SHOW_ASCII = 1;     % 1 = show BYTE as ASCII, 0 = show Numbers as charstring 
-        SEND_DATA = 1;      
+        SEND_DATA = 1;
+        SHOW_OUTGOING;
         
         %COM FLAGS:
         ASCII_CR = 0;
@@ -74,7 +76,7 @@ classdef PPG_GUI < handle
         function buildGui(obj)
             %creata GUI Figure
             obj.fig = uifigure('Name','Serialinterface - PPG Simulator',...
-                     'Position', [100 100 1000 400]);
+                     'Position', [100 100 950 400]);
             
             obj.signalFileListing = dir('signaldata/*.mat');     
                  
@@ -104,9 +106,15 @@ classdef PPG_GUI < handle
                     'ButtonPushedFcn', @(~,~) (dscnnctSerial(obj)));
                 
             obj.cb_showASCII = uicheckbox(obj.fig,...
-                            'Position',[450,350,100,25],...
+                            'Position',[10,315,100,25],...
                             'Text','show ASCII',...
                             'Value',0);
+                        
+            obj.cb_showSend = uicheckbox(obj.fig,...
+                            'Position',[520,315,150,25],...
+                            'Text','show Send Data',...
+                            'Value',0);            
+                       
 
             obj.txa_outputWindow = uitextarea(obj.fig,...
                     'Position',[10, 50, 440, 250],...
@@ -123,12 +131,12 @@ classdef PPG_GUI < handle
                     'ButtonPushedFcn', @(~, ~) (sendMsgSerial(obj)));
                 
             obj.btn_sendData = uibutton(obj.fig,...
-                    'Position',[540,350,100,25],...
+                    'Position',[520,350,100,25],...
                     'Text','Send Data',...
                     'ButtonPushedFcn', @(~,~) (sendData(obj)));
                 
             obj.dd_selSignalFile = uidropdown(obj.fig,...
-                    'Position',[650 350 200 25],...
+                    'Position',[630 350 200 25],...
                     'Items', {obj.signalFileListing.name});
 
                 
@@ -170,7 +178,8 @@ classdef PPG_GUI < handle
 
                     % close Port when figure gets closed
                     %fclose(obj.s);
-                    obj.s = 0;
+                    %obj.s = 0;
+                    delete(obj.s)
                     delete(obj.fig)
 
 
@@ -358,23 +367,41 @@ classdef PPG_GUI < handle
                 obj.btn_sendData.Text = 'Stop';
             else
                 temp = table2array(obj.signalData(obj.signalDataIndex,1));
+                %write Headerbyte
+                write(obj.s,0x12,"uint8");
                 
                 %write seperated Databytes Highbyte to Lowbyte
-                tempbyte = uint8(bitsrl(int32(temp),24));
-                write(obj.s,tempbyte,"uint8");
+                tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                write(obj.s,tempbyte(1),"uint8");
                 
-                tempbyte = uint8(bitsrl(int32(temp),16));
-                write(obj.s,tempbyte,"uint8");
+                tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                write(obj.s,tempbyte(2),"uint8");
                 
-                tempbyte = uint8(bitsrl(int32(temp),8));
-                write(obj.s,tempbyte,"uint8");
+                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                write(obj.s,tempbyte(3),"uint8");
                 
-                tempbyte = uint8(bitand(int32(temp), int32(0x000000FF)));
-                writeline(obj.s,char(tempbyte) );
+                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                writeline(obj.s,char(tempbyte(4)) ); % write Lowbyte + CR + LF
                 
+              
                 %increment Data Indice
                 obj.signalDataIndex = obj.signalDataIndex + 1;
                 
+                if obj.SHOW_OUTGOING == 1
+                %write data to Serial Monitor
+                    obj.ASCII_ARR{end+1} = sprintf('--> "%s" "%s" "%s" "%s" "%s" "%s" "%s"',...
+                        0x12,tempbyte(1),tempbyte(2),tempbyte(3),tempbyte(4), 0x0D, 0x0A); 
+                    obj.NUM_ARR{end+1} = sprintf('--> "%s" "%s" "%s" "%s" "%s" "%s" "%s"',...
+                        0x12,tempbyte(1),tempbyte(2),tempbyte(3),tempbyte(4), 0x0D, 0x0A);
+                    
+                    if(obj.cb_showASCII.Value == 1)
+                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
+                    else
+                        obj.txa_outputWindow.Value = obj.NUM_ARR;
+                    
+                    end
+                    scroll(obj.txa_outputWindow,'bottom');
+                end
             end
         
         end
@@ -394,11 +421,14 @@ classdef PPG_GUI < handle
                     obj.NUM_ARR{end+1} = sprintf('"%s" %s',...
                         obj.signalPath, str_temp); 
                     
+                    
+                    
                     if(obj.cb_showASCII.Value == 1)
                         obj.txa_outputWindow.Value = obj.ASCII_ARR;
                     else
                         obj.txa_outputWindow.Value = obj.NUM_ARR;
                     end
+                    scroll(obj.txa_outputWindow,'bottom');
                     status = 1;
                 else
                     %put Load unsuccessfull Message to Outputform
