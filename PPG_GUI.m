@@ -13,12 +13,14 @@ classdef PPG_GUI < handle
         dd_selPort;
         dd_selBAUD;
         dd_selSignalFile;
+        dd_showASCII;
         
         % Buttons
         btn_cnnctPort;
         btn_dscnnctPort;
         btn_sendMsg;
         btn_sendData;
+        btn_clearScreen
         
         % Checkboxes
         cb_showASCII;
@@ -39,10 +41,14 @@ classdef PPG_GUI < handle
         
         tmp_Buffer = int32(0);
         asc_buffer = [];
+
+        hex_buffer = [];
+
         Buffersize = 256;
         Buffer;
         numBytes = 0;
         ASCII_ARR = {};
+        HEX_ARR = {};
         NUM_ARR = {};
         
         %SignalFiles
@@ -94,6 +100,16 @@ classdef PPG_GUI < handle
                     'Items', {'9600', '56700', '115200'},...
                     'ItemsData', [9600, 56700, 115200]);
 
+            obj.dd_showASCII = uidropdown(obj.fig,...
+                    'Position',[10,315,100,25],...
+                    'Items', {'DEC', 'HEX', 'ASCII'},...
+                    'ItemsData', [1, 2, 3]);
+                
+            obj.btn_clearScreen = uibutton(obj.fig,...
+                    'Position',[120,315,100,25],...
+                    'Text','Clear',...
+                    'ButtonPushedFcn', @(~,~) (clrScreen(obj)));
+
 
             obj.btn_cnnctPort = uibutton(obj.fig,...
                     'Position',[230,350,100,25],...
@@ -105,10 +121,12 @@ classdef PPG_GUI < handle
                     'Text','Disconnect',...
                     'ButtonPushedFcn', @(~,~) (dscnnctSerial(obj)));
                 
-            obj.cb_showASCII = uicheckbox(obj.fig,...
-                            'Position',[10,315,100,25],...
-                            'Text','show ASCII',...
-                            'Value',0);
+%             obj.cb_showASCII = uicheckbox(obj.fig,...
+%                             'Position',[10,315,100,25],...
+%                             'Text','show ASCII',...
+%                             'Value',0);
+                        
+
                         
             obj.cb_showSend = uicheckbox(obj.fig,...
                             'Position',[520,315,150,25],...
@@ -138,6 +156,7 @@ classdef PPG_GUI < handle
             obj.dd_selSignalFile = uidropdown(obj.fig,...
                     'Position',[630 350 200 25],...
                     'Items', {obj.signalFileListing.name});
+                
 
                 
             obj.ax_plot = uiaxes(obj.fig,...
@@ -178,8 +197,8 @@ classdef PPG_GUI < handle
 
                     % close Port when figure gets closed
                     %fclose(obj.s);
-                    %obj.s = 0;
-                    delete(obj.s)
+                    obj.s = 0;
+
                     delete(obj.fig)
 
 
@@ -187,6 +206,12 @@ classdef PPG_GUI < handle
                     return
             end
         end
+        
+        function clrScreen(obj)
+            obj.txa_outputWindow.Value = '';
+        
+        end
+        
       
         function plotData(obj)
             % calculating x-achsis Label : first Data at x = 0
@@ -228,14 +253,18 @@ classdef PPG_GUI < handle
             str_temp = 'Verbunden mit: ';
             obj.ASCII_ARR{1} = sprintf('%s %s',...
                 str_temp, obj.dd_selPort.Value); 
+            obj.HEX_ARR{1} = sprintf('%s %s',...
+                str_temp, obj.dd_selPort.Value); 
             obj.NUM_ARR{1} = sprintf('%s %s',...
                 str_temp, obj.dd_selPort.Value);  
            
+            refresh_screen(obj);
         end
         
         function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
             %fclose(obj.s);
             obj.s = 0;
+            stop(obj.signaltimer);
             %Connect Button enabled again after successfull port closing
             obj.btn_cnnctPort.Enable = 1;
             obj.btn_dscnnctPort.Enable = 0;
@@ -243,16 +272,21 @@ classdef PPG_GUI < handle
             % clear buffers
             obj.NUM_ARR = [];
             obj.ASCII_ARR = {};
+            obj.HEX_ARR = {};
         end
   
         function msgRCV(obj)
             msg = read(obj.s,1,"uint8");
+            obj.asc_buffer(end+1) = char(msg);
+
+            obj.hex_buffer(end+1) = msg;
+
                       
             % Make int32 from multiple Databytes            
             if (obj.HEADER == obj.DATA_BYTE)                
                 obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
                 
-                obj.asc_buffer(end+1) = msg;
+                %obj.asc_buffer(end+1) = msg;
                 obj.numBytes = obj.numBytes + 1;
                 
                 % Payload on Data max. 4 Bytes --> break
@@ -274,14 +308,14 @@ classdef PPG_GUI < handle
                     case 0x11
                         obj.HEADER = obj.CTRL_BYTE;
                         obj.HEADER = 0;
-                        obj.asc_buffer(end+1) = 0x11;
+                        %obj.asc_buffer(end+1) = 0x11;
                     case 0x12
                         obj.HEADER = obj.DATA_BYTE;
-                        obj.asc_buffer(end+1) = 0x12;
+                        %obj.asc_buffer(end+1) = 0x12;
                     case 0x13
                         obj.HEADER = obj.ERROR_BYTE;
                         obj.HEADER = 0;
-                        obj.asc_buffer(end+1) = 0x13;
+                        %obj.asc_buffer(end+1) = 0x13;
                     case 0x0D
                         obj.ASCII_CR = 1;   % CR Flag = 1
                 end                
@@ -289,19 +323,29 @@ classdef PPG_GUI < handle
   
             if ((msg == 0x0A && obj.ASCII_CR == 1) || (obj.CR_LF_EN == 1))
                 
-                obj.asc_buffer(end+1) = 0x0D;
-                obj.asc_buffer(end+1) = 0x0A;
+                %obj.asc_buffer(end+1) = 0x0D;
+                %obj.asc_buffer(end+1) = 0x0A;
                 
                 obj.NUM_ARR{end+1} = sprintf('%d', obj.tmp_Buffer); 
                 
-                str_buffer = [];
+                str_bufferasc = [];
                 for k = 1 : length(obj.asc_buffer)
-                    str = sprintf("%02X ",obj.asc_buffer(k));
-                    str_buffer = strcat(str_buffer,str);
+                    str = sprintf("%s ",obj.asc_buffer(k));
+                    str_bufferasc = strcat(str_bufferasc,str);
+                end
+                str_bufferhex = [];
+                for k = 1 : length(obj.hex_buffer)
+                    str = sprintf("%02X ",obj.hex_buffer(k));
+                    str_bufferhex = strcat(str_bufferhex,str);
                 end
                                 
-                obj.ASCII_ARR{end+1} = sprintf('%s',str_buffer);
+                obj.ASCII_ARR{end+1} = sprintf('%s',str_bufferasc);
+                obj.HEX_ARR{end+1} = sprintf('%s',str_bufferhex);
                 
+                obj.asc_buffer = [];
+                obj.hex_buffer = [];
+                
+
                 obj.ASCII_CR = 0;  % Reset CR Flag
 
                 %plot Data
@@ -316,26 +360,34 @@ classdef PPG_GUI < handle
                     %reassign helpervars = 0
                     obj.DATA_TO_PLOT = 0;
                     obj.tmp_Buffer = 0;
-                    obj.asc_buffer = [];
+
+
 
                     % call plotfunction if enabled
                     plotData(obj);
                 end
             end
 
-            if(obj.cb_showASCII.Value == 1)
-                obj.txa_outputWindow.Value = obj.ASCII_ARR;
-            else
-                obj.txa_outputWindow.Value = obj.NUM_ARR;
-            end
+%             if(obj.cb_showASCII.Value == 1)
+%                 %obj.txa_outputWindow.Value = obj.ASCII_ARR;
+%                 obj.txa_outputWindow.Value = obj.HEX_ARR;
+%             else
+%                 obj.txa_outputWindow.Value = obj.NUM_ARR;
+%             end
+%             
+%             
+%             %scroll to bottom
+%             scroll(obj.txa_outputWindow,'bottom');
+            refresh_screen(obj);
             
-            %scroll to bottom
-            scroll(obj.txa_outputWindow,'bottom');
         end
         
         function sendData(obj)
             if obj.SEND_DATA == 1
                 if loadFile(obj) == 1
+                    obj.SEND_DATA = 0;
+                    obj.btn_sendData.Text = 'Stop';
+                    obj.signalDataIndex = 1;
                     
                     %configure signal timer for fixed samplerate
                     %transmission
@@ -345,9 +397,7 @@ classdef PPG_GUI < handle
                     obj.signaltimer.TimerFcn = @(~,~) putSample(obj);
                     start(obj.signaltimer);
                     
-                    obj.SEND_DATA = 0;
-                    obj.btn_sendData.Text = 'Stop';
-                    obj.signalDataIndex = 1;
+                    
                 else
                     % ToDo Error Message
                 end
@@ -358,6 +408,7 @@ classdef PPG_GUI < handle
                 obj.btn_sendData.Text = 'Send Data';
             end
         end
+        
         function putSample(obj)
             %check for arrayindex overflow
             if obj.signalDataIndex > obj.signalLength
@@ -394,16 +445,38 @@ classdef PPG_GUI < handle
                     obj.NUM_ARR{end+1} = sprintf('--> "%s" "%s" "%s" "%s" "%s" "%s" "%s"',...
                         0x12,tempbyte(1),tempbyte(2),tempbyte(3),tempbyte(4), 0x0D, 0x0A);
                     
-                    if(obj.cb_showASCII.Value == 1)
-                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
-                    else
-                        obj.txa_outputWindow.Value = obj.NUM_ARR;
-                    
-                    end
-                    scroll(obj.txa_outputWindow,'bottom');
+%                     if(obj.cb_showASCII.Value == 1)
+%                         obj.txa_outputWindow.Value = obj.ASCII_ARR;
+%                     else
+%                         obj.txa_outputWindow.Value = obj.NUM_ARR;
+%                     
+%                     end
+%                     scroll(obj.txa_outputWindow,'bottom');
+                    refresh_screen(obj);
                 end
             end
         
+        end
+        
+        function refresh_screen(obj)
+            
+            if(obj.dd_showASCII.Value == 3)
+
+                obj.txa_outputWindow.Value = obj.ASCII_ARR;
+
+            elseif (obj.dd_showASCII.Value == 2)
+
+                obj.txa_outputWindow.Value = obj.HEX_ARR;
+
+            else
+                obj.txa_outputWindow.Value = obj.NUM_ARR;
+
+            end
+            scroll(obj.txa_outputWindow,'bottom');
+        end
+        
+        function txa_outScrollBtm(obj)
+            scroll(obj.txa_outputWindow,'bottom');
         end
         
         function status = loadFile(obj)
@@ -418,31 +491,37 @@ classdef PPG_GUI < handle
                     str_temp = ' wurde geladen';
                     obj.ASCII_ARR{end+1} = sprintf('"%s" %s',...
                         obj.signalPath, str_temp); 
+                    obj.HEX_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
                     obj.NUM_ARR{end+1} = sprintf('"%s" %s',...
                         obj.signalPath, str_temp); 
                     
                     
                     
-                    if(obj.cb_showASCII.Value == 1)
-                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
-                    else
-                        obj.txa_outputWindow.Value = obj.NUM_ARR;
-                    end
-                    scroll(obj.txa_outputWindow,'bottom');
+%                     if(obj.cb_showASCII.Value == 1)
+%                         obj.txa_outputWindow.Value = obj.ASCII_ARR;
+%                     else
+%                         obj.txa_outputWindow.Value = obj.NUM_ARR;
+%                     end
+%                     scroll(obj.txa_outputWindow,'bottom');
+                    refresh_screen(obj);
                     status = 1;
                 else
                     %put Load unsuccessfull Message to Outputform
                     str_temp = ' wurde nicht gefunden';
                     obj.ASCII_ARR{end+1} = sprintf('"%s" %s',...
                         obj.signalPath, str_temp); 
+                    obj.HEX_ARR{end+1} = sprintf('"%s" %s',...
+                        obj.signalPath, str_temp); 
                     obj.NUM_ARR{end+1} = sprintf('"%s" %s',...
                         obj.signalPath, str_temp); 
                     
-                    if(obj.cb_showASCII.Value == 1)
-                        obj.txa_outputWindow.Value = obj.ASCII_ARR;
-                    else
-                        obj.txa_outputWindow.Value = obj.NUM_ARR;
-                    end
+%                     if(obj.cb_showASCII.Value == 1)
+%                         obj.txa_outputWindow.Value = obj.ASCII_ARR;
+%                     else
+%                         obj.txa_outputWindow.Value = obj.NUM_ARR;
+%                     end
+                    refresh_screen(obj);
                     status = 0;
                 end
                  
