@@ -460,13 +460,14 @@ classdef PPG_GUI < handle
         
         function putSample(obj)
             %check for arrayindex overflow
-            if obj.signalDataIndex > obj.signalLength
+            if obj.signalDataIndex >= obj.signalLength
                 %reset transmission parameter
-                stop(t);
+                stop(obj.signaltimer);
                 obj.signalDataIndex = 1;
                 obj.btn_sendData.Text = 'Stop';
             else
-                temp = table2array(obj.signalData(obj.signalDataIndex,1));
+                %temp = table2array(obj.signalData(obj.signalDataIndex,1));
+                temp = obj.signalData(obj.signalDataIndex,1);
                 %write Headerbyte
                 write(obj.s,0x12,"uint8");
                 
@@ -487,7 +488,7 @@ classdef PPG_GUI < handle
                 %increment Data Indice
                 obj.signalDataIndex = obj.signalDataIndex + 1;
                 
-                if obj.SHOW_OUTGOING == 1
+                if obj.cb_showSend.Value == 1
                 %write data to Serial Monitor
                     obj.ASCII_ARR{end+1} = sprintf('--> "%s" "%s" "%s" "%s" "%s" "%s" "%s"',...
                         0x12,tempbyte(1),tempbyte(2),tempbyte(3),tempbyte(4), 0x0D, 0x0A); 
