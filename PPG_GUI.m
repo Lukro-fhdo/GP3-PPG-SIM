@@ -14,6 +14,7 @@ classdef PPG_GUI < handle
         dd_selBAUD;
         dd_selSignalFile;
         dd_showASCII;
+        dd_headerByte;
         
         % Buttons
         btn_cnnctPort;
@@ -105,6 +106,11 @@ classdef PPG_GUI < handle
                     'Items', {'DEC', 'HEX', 'ASCII'},...
                     'ItemsData', [1, 2, 3]);
                 
+            obj.dd_headerByte = uidropdown(obj.fig,...
+                    'Position',[230,315,100,25],...
+                    'Items', {'None', 'CTRL_Byte', 'DATA_Byte', 'ERR_Byte'},...
+                    'ItemsData', [0x00, 0x11, 0x12,0x13]);
+                
             obj.btn_clearScreen = uibutton(obj.fig,...
                     'Position',[120,315,100,25],...
                     'Text','Clear',...
@@ -156,6 +162,8 @@ classdef PPG_GUI < handle
             obj.dd_selSignalFile = uidropdown(obj.fig,...
                     'Position',[630 350 200 25],...
                     'Items', {obj.signalFileListing.name});
+                
+           
                 
 
                 
@@ -234,7 +242,41 @@ classdef PPG_GUI < handle
             %if s.status == 'open' 
                 if obj.txa_inputForm.Value ~= 0
                     %fwrite(obj.s,obj.txa_inputForm.Value{1},'uint8');
-                    writeline(obj.s,obj.txa_inputForm.Value);
+                    
+                    switch obj.dd_headerByte.Value
+                        case 0x00
+                            
+                            writeline(obj.s,obj.txa_inputForm.Value);
+                        case 0x11
+                            write(obj.s,char(0x11),"uint8");
+                            writeline(obj.s,obj.txa_inputForm.Value);
+                        case 0x12
+%                             write(obj.s,char(0x12),"uint8");
+%                             write(obj.s,str2num(obj.txa_inputForm.Value),"int32");
+%                             write(obj.s,char(0x0D),"uint8");
+%                             write(obj.s,newline,"uint8");
+                            temp = str2num(obj.txa_inputForm.Value);
+                            %write Headerbyte
+                            write(obj.s,0x12,"uint8");
+
+                            %write seperated Databytes Highbyte to Lowbyte
+                            tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                            write(obj.s,tempbyte(1),"uint8");
+
+                            tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                            write(obj.s,tempbyte(2),"uint8");
+
+                            tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                            write(obj.s,tempbyte(3),"uint8");
+
+                            tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                            writeline(obj.s,char(tempbyte(4)) ); % write Lowbyte + CR + LF
+                        case 0x13
+                    end
+%                     if obj.dd_headerByte.Value ~= 0x00
+%                         write(obj.s,char(obj.dd_headerByte.Value),"uint8");
+%                     end
+%                     writeline(obj.s,obj.txa_inputForm.Value);
                 end 
                 obj.txa_inputForm.Value = '';
             %end
@@ -264,7 +306,12 @@ classdef PPG_GUI < handle
         function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
             %fclose(obj.s);
             obj.s = 0;
-            stop(obj.signaltimer);
+            
+            %stop timer if running
+            timer = get(obj.signaltimer,'Running');
+            if isequal(timer,'on')
+                stop(obj.signaltimer);
+            end
             %Connect Button enabled again after successfull port closing
             obj.btn_cnnctPort.Enable = 1;
             obj.btn_dscnnctPort.Enable = 0;
@@ -277,8 +324,10 @@ classdef PPG_GUI < handle
   
         function msgRCV(obj)
             msg = read(obj.s,1,"uint8");
-            obj.asc_buffer(end+1) = char(msg);
-
+            
+            if (msg ~= 0x0D) && (msg ~= 0x0A) 
+                obj.asc_buffer(end+1) = char(msg);
+            end
             obj.hex_buffer(end+1) = msg;
 
                       
