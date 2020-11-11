@@ -1,10 +1,17 @@
 classdef PPG_GUI < handle 
     %PPG-GUI Summary of this class goes here
     %   Detailed explanation goes here
-    
+ %% MEMBER VARIABLES   
     properties
+        
+        % Serialport
         s;
+        S_STATE;
+        % figure
         fig;
+        
+        % DEBUGFLAGS
+        SERIALPORTTYPE = 1; % select serialport 0 = old, 1= new
         
         % GUI Elements:
         
@@ -78,7 +85,9 @@ classdef PPG_GUI < handle
        
         HEADER = 0;
     end
-    
+        
+%% GUI ELEMENTS
+
     methods (Access = private)
         function buildGui(obj)
             %creata GUI Figure
@@ -116,7 +125,6 @@ classdef PPG_GUI < handle
                     'Text','Clear',...
                     'ButtonPushedFcn', @(~,~) (clrScreen(obj)));
 
-
             obj.btn_cnnctPort = uibutton(obj.fig,...
                     'Position',[230,350,100,25],...
                     'Text','Connect',...
@@ -125,20 +133,13 @@ classdef PPG_GUI < handle
             obj.btn_dscnnctPort = uibutton(obj.fig,...
                     'Position',[340,350,100,25],...
                     'Text','Disconnect',...
+                    'Enable',0,...
                     'ButtonPushedFcn', @(~,~) (dscnnctSerial(obj)));
-                
-%             obj.cb_showASCII = uicheckbox(obj.fig,...
-%                             'Position',[10,315,100,25],...
-%                             'Text','show ASCII',...
-%                             'Value',0);
-                        
-
-                        
+                                       
             obj.cb_showSend = uicheckbox(obj.fig,...
-                            'Position',[520,315,150,25],...
-                            'Text','show Send Data',...
-                            'Value',0);            
-                       
+                    'Position',[520,315,150,25],...
+                    'Text','show Send Data',...
+                    'Value',0);                               
 
             obj.txa_outputWindow = uitextarea(obj.fig,...
                     'Position',[10, 50, 440, 250],...
@@ -146,26 +147,23 @@ classdef PPG_GUI < handle
                 
             obj.txa_inputForm = uieditfield(obj.fig,'text',...
                     'Position', [10,10,330,25],...
-                    'ValueChangedFcn', @(~,~) (sendMsgSerial(obj)));
-            
+                    'ValueChangedFcn', @(~,~) (sendMsgSerial(obj)));            
 
             obj.btn_sendMsg = uibutton(obj.fig,...
                     'Position',[350,10,100,25],...
                     'Text','Send',...
+                    'Enable',0,...
                     'ButtonPushedFcn', @(~, ~) (sendMsgSerial(obj)));
                 
             obj.btn_sendData = uibutton(obj.fig,...
                     'Position',[520,350,100,25],...
                     'Text','Send Data',...
+                    'Enable',0,...
                     'ButtonPushedFcn', @(~,~) (sendData(obj)));
                 
             obj.dd_selSignalFile = uidropdown(obj.fig,...
                     'Position',[630 350 200 25],...
                     'Items', {obj.signalFileListing.name});
-                
-           
-                
-
                 
             obj.ax_plot = uiaxes(obj.fig,...
                     'Position', [500,50,440,250]);
@@ -174,10 +172,12 @@ classdef PPG_GUI < handle
         
     end
     
-    
+%% Memberfunctions   
+
     methods (Access = public)
         
-        %% Constructor
+%% Constructor
+
         function obj = PPG_GUI() %PPG_GUI Construct an instance of this class
             
             close all;
@@ -191,10 +191,7 @@ classdef PPG_GUI < handle
                      
         end
         
-        
-        %% Memberfunctions
-        
-        %% GUI Callbackfunctions
+%% GUI Callbackfunctions
         
         function my_closereq(obj)
             selection = uiconfirm(obj.fig,'Close the figure window?',...
@@ -204,8 +201,16 @@ classdef PPG_GUI < handle
                 case 'OK'
 
                     % close Port when figure gets closed
-                    %fclose(obj.s);
-                    obj.s = 0;
+                    if obj.S_STATE == 1
+                        %select close function by flag
+                        switch obj.SERIALPORTTYPE
+                            case 0
+                                fclose(obj.s);
+                            case 1   
+                                obj.s = 0;
+                        end
+                    end
+                    
 
                     delete(obj.fig)
 
@@ -220,7 +225,6 @@ classdef PPG_GUI < handle
         
         end
         
-      
         function plotData(obj)
             % calculating x-achsis Label : first Data at x = 0
             obj.x = ((obj.n_xAxis - obj.Buffersize + 1) : obj.n_xAxis);
@@ -230,82 +234,80 @@ classdef PPG_GUI < handle
             
             obj.ax_plot.XLim = [(obj.n_xAxis - obj.Buffersize + 1) obj.n_xAxis];
         end
-                
-        %% Serial COM
-        
-        % refresh Portselect Dropdown menu Items on click
+                   
         function portSelect(obj)
+             % refresh Portselect Dropdown menu Items on click
             obj.dd_selPort.Items = seriallist('available');
         end
-      
-        function sendMsgSerial(obj)
-            %if s.status == 'open' 
-                if obj.txa_inputForm.Value ~= 0
-                    %fwrite(obj.s,obj.txa_inputForm.Value{1},'uint8');
-                    
-                    switch obj.dd_headerByte.Value
-                        case 0x00
-                            
-                            writeline(obj.s,obj.txa_inputForm.Value);
-                        case 0x11
-                            write(obj.s,char(0x11),"uint8");
-                            writeline(obj.s,obj.txa_inputForm.Value);
-                        case 0x12
-%                             write(obj.s,char(0x12),"uint8");
-%                             write(obj.s,str2num(obj.txa_inputForm.Value),"int32");
-%                             write(obj.s,char(0x0D),"uint8");
-%                             write(obj.s,newline,"uint8");
-                            temp = str2num(obj.txa_inputForm.Value);
-                            %write Headerbyte
-                            write(obj.s,0x12,"uint8");
-
-                            %write seperated Databytes Highbyte to Lowbyte
-                            tempbyte(1) = uint8(bitsrl(int32(temp),24));
-                            write(obj.s,tempbyte(1),"uint8");
-
-                            tempbyte(2) = uint8(bitsrl(int32(temp),16));
-                            write(obj.s,tempbyte(2),"uint8");
-
-                            tempbyte(3) = uint8(bitsrl(int32(temp),8));
-                            write(obj.s,tempbyte(3),"uint8");
-
-                            tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
-                            writeline(obj.s,char(tempbyte(4)) ); % write Lowbyte + CR + LF
-                        case 0x13
-                    end
-%                     if obj.dd_headerByte.Value ~= 0x00
-%                         write(obj.s,char(obj.dd_headerByte.Value),"uint8");
-%                     end
-%                     writeline(obj.s,obj.txa_inputForm.Value);
-                end 
-                obj.txa_inputForm.Value = '';
-            %end
-        end
-
-        function cnnctSerial(obj)            
-            obj.s = serialport(obj.dd_selPort.Value,obj.dd_selBAUD.Value);
-            %Button has to be disabled to prevent multiple portopenings
-            obj.btn_cnnctPort.Enable = 0;
-            obj.btn_dscnnctPort.Enable = 1;
-            %fopen(obj.s);
-            configureCallback(obj.s,"byte",1, @(~, ~) (msgRCV(obj)));
-            configureTerminator(obj.s,"CR/LF");
+        
+        
+%% Serial COM
+        
+        function cnnctSerial(obj) 
             
+            switch obj.SERIALPORTTYPE
+                case 0  %old serialport interface
+                    
+                    obj.s = serial(obj.dd_selPort.Value,'BaudRate',...
+                                    obj.dd_selBAUD.Value,'Terminator','CR/LF');
+                    obj.s.BytesAvailableFcn = @(~,~)(msgRCV(obj));
+                    
+                    %open Serial port:
+                    fopen(obj.s);
+                    
+                    %set connection successfull Flag
+                    obj.S_STATE = isequal(obj.s.status,'open');
+                        
+                    
+                case 1  %new serialport interface
+                    
+                    try
+                        obj.s = serialport(obj.dd_selPort.Value,obj.dd_selBAUD.Value);
+                        configureCallback(obj.s,"byte",1, @(~, ~) (msgRCV(obj)));
+                        configureTerminator(obj.s,"CR/LF");
+                        
+                        obj.S_STATE = 1;
+                    catch 
+                        % put Error on output window
+                        obj.S_STATE = 0;
+                    end
+                    
+                    
+                    
+            end
             %put Connect Message to Outputform
-            str_temp = 'Verbunden mit: ';
-            obj.ASCII_ARR{1} = sprintf('%s %s',...
-                str_temp, obj.dd_selPort.Value); 
-            obj.HEX_ARR{1} = sprintf('%s %s',...
-                str_temp, obj.dd_selPort.Value); 
-            obj.NUM_ARR{1} = sprintf('%s %s',...
-                str_temp, obj.dd_selPort.Value);  
-           
+            switch obj.S_STATE
+                case 1
+                    str_temp = strcat('Verbunden mit: ',obj.dd_selPort.Value);
+                    
+                    %Button has to be disabled to prevent multiple portopenings
+                    obj.btn_cnnctPort.Enable = 0;
+                    obj.btn_dscnnctPort.Enable = 1;
+                    obj.btn_sendData.Enable = 1;
+                    obj.btn_sendMsg.Enable = 1;
+                    obj.dd_selPort.Enable = 0;
+                    obj.dd_selBAUD.Enable = 0;
+                    
+                otherwise
+                    str_temp = 'Verbindung fehlgeschlagen';
+            end
+
+            put_msg_on_screen(obj,str_temp);
             refresh_screen(obj);
         end
         
         function dscnnctSerial(obj)%,sel_Port, sel_BAUD)
-            %fclose(obj.s);
-            obj.s = 0;
+            
+            switch obj.SERIALPORTTYPE
+                case 0 
+                    fclose(obj.s);
+                case 1
+                    obj.s = 0;
+            end
+                   
+            
+           
+            
             
             %stop timer if running
             timer = get(obj.signaltimer,'Running');
@@ -315,12 +317,74 @@ classdef PPG_GUI < handle
             %Connect Button enabled again after successfull port closing
             obj.btn_cnnctPort.Enable = 1;
             obj.btn_dscnnctPort.Enable = 0;
+            obj.btn_sendData.Enable = 0;
+            obj.btn_sendMsg.Enable = 0;
+            obj.dd_selPort.Enable = 1;
+            obj.dd_selBAUD.Enable = 1;
             
             % clear buffers
             obj.NUM_ARR = [];
             obj.ASCII_ARR = {};
             obj.HEX_ARR = {};
         end
+
+%% MSG Sender
+
+        function sendMsgSerial(obj)
+            switch obj.SERIALPORTTYPE
+                case 0  %old serialport interface
+                case 1  %new serialport interface
+                    
+            %if s.status == 'open' 
+                if obj.txa_inputForm.Value ~= 0
+                    %fwrite(obj.s,obj.txa_inputForm.Value{1},'uint8');
+
+                    switch obj.dd_headerByte.Value
+                        case 0x00
+
+                            writeline(obj.s,obj.txa_inputForm.Value);
+                        case 0x11
+                            write(obj.s,char(0x11),"uint8");
+                            writeline(obj.s,obj.txa_inputForm.Value);
+                        case 0x12
+                            
+                            try % write only numbers 
+                                temp = str2num(obj.txa_inputForm.Value);
+                
+                                %write Headerbyte
+                                write(obj.s,0x12,"uint8");
+
+                                %write seperated Databytes Highbyte to Lowbyte
+                                tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                                write(obj.s,tempbyte(1),"uint8");
+
+                                tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                                write(obj.s,tempbyte(2),"uint8");
+
+                                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                                write(obj.s,tempbyte(3),"uint8");
+
+                                % write Lowbyte + CR + LF
+                                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                                writeline(obj.s,char(tempbyte(4)) ); 
+                            catch
+                                
+%------>>>>>>>> BUG : string wird doppel geschrieben --> TO BE FIXED
+%------>>>>>>>> BUG : string wird doppel geschrieben --> TO BE FIXED
+%------>>>>>>>> BUG : string wird doppel geschrieben --> TO BE FIXED
+
+                                put_msg_on_screen(obj,'Falsche Eingabe. Nur Zahlenwerte möglich')
+                                refresh_screen(obj);
+                            end
+                        case 0x13
+                    end
+                end 
+            end
+            obj.txa_inputForm.Value = '';
+            
+        end
+
+%% MSG Receiver
   
         function msgRCV(obj)
             msg = read(obj.s,1,"uint8");
@@ -417,20 +481,13 @@ classdef PPG_GUI < handle
                 end
             end
 
-%             if(obj.cb_showASCII.Value == 1)
-%                 %obj.txa_outputWindow.Value = obj.ASCII_ARR;
-%                 obj.txa_outputWindow.Value = obj.HEX_ARR;
-%             else
-%                 obj.txa_outputWindow.Value = obj.NUM_ARR;
-%             end
-%             
-%             
-%             %scroll to bottom
-%             scroll(obj.txa_outputWindow,'bottom');
+
             refresh_screen(obj);
             
         end
         
+%% Send Data
+
         function sendData(obj)
             if obj.SEND_DATA == 1
                 if loadFile(obj) == 1
@@ -448,7 +505,9 @@ classdef PPG_GUI < handle
                     
                     
                 else
-                    % ToDo Error Message
+                    
+                    
+                    % TODO ERROR MESSAGE
                 end
             else
                 stop(obj.signaltimer);
@@ -508,6 +567,8 @@ classdef PPG_GUI < handle
         
         end
         
+ %% Screen Functions 
+ 
         function refresh_screen(obj)
             
             if(obj.dd_showASCII.Value == 3)
@@ -529,6 +590,19 @@ classdef PPG_GUI < handle
             scroll(obj.txa_outputWindow,'bottom');
         end
         
+        function put_msg_on_screen(obj,msg)
+                   
+            obj.ASCII_ARR{end+1} = sprintf('%s',...
+                msg); 
+            obj.HEX_ARR{end+1} = sprintf('%s ',...
+                msg); 
+            obj.NUM_ARR{end+1} = sprintf('%s ',...
+                msg);  
+        
+        end
+        
+ %% Data Files
+ 
         function status = loadFile(obj)
             %check for Data
             obj.signalPath = append('signaldata/',obj.dd_selSignalFile.Value);
@@ -577,9 +651,7 @@ classdef PPG_GUI < handle
                  
         
         end
-        
-      
-        
+           
     end
 end
 
