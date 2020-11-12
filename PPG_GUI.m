@@ -250,7 +250,10 @@ classdef PPG_GUI < handle
                     
                     obj.s = serial(obj.dd_selPort.Value,'BaudRate',...
                                     obj.dd_selBAUD.Value,'Terminator','CR/LF');
-                    obj.s.BytesAvailableFcn = @(~,~)(msgRCV(obj));
+                    obj.s.BytesAvailableFcnCount = 1;
+                    obj.s.BytesAvailableFcnMode = 'byte';
+                    %obj.s.BytesAvailableFcn = @(~,~)(msgRCV(obj));
+                    obj.s.BytesAvailableFcn = @obj.msgRCV;
                     
                     %open Serial port:
                     fopen(obj.s);
@@ -331,9 +334,7 @@ classdef PPG_GUI < handle
 %% MSG Sender
 
         function sendMsgSerial(obj)
-            switch obj.SERIALPORTTYPE
-                case 0  %old serialport interface
-                case 1  %new serialport interface
+            
                     
             %if s.status == 'open' 
                 if obj.txa_inputForm.Value ~= 0
@@ -342,31 +343,45 @@ classdef PPG_GUI < handle
                     switch obj.dd_headerByte.Value
                         case 0x00
 
-                            writeline(obj.s,obj.txa_inputForm.Value);
+                            %writeline(obj.s,obj.txa_inputForm.Value);
+                            putByte(obj,obj.txa_inputForm.Value);
+                            putByte(obj,0x0D);
+                            putByte(obj,0x0A);
                         case 0x11
-                            write(obj.s,char(0x11),"uint8");
-                            writeline(obj.s,obj.txa_inputForm.Value);
+%                             write(obj.s,char(0x11),"uint8");
+%                             writeline(obj.s,obj.txa_inputForm.Value);
+                            putByte(obj,0x11);
+                            putByte(obj,obj.txa_inputForm.Value);
+                            putByte(obj,0x0D);
+                            putByte(obj,0x0A);
                         case 0x12
                             
                             try % write only numbers 
                                 temp = str2num(obj.txa_inputForm.Value);
                 
                                 %write Headerbyte
-                                write(obj.s,0x12,"uint8");
+                                %write(obj.s,0x12,"uint8");
+                                putByte(obj,0x12);
 
                                 %write seperated Databytes Highbyte to Lowbyte
                                 tempbyte(1) = uint8(bitsrl(int32(temp),24));
-                                write(obj.s,tempbyte(1),"uint8");
+                                %write(obj.s,tempbyte(1),"uint8");
+                                putByte(obj,tempbyte(1));
 
                                 tempbyte(2) = uint8(bitsrl(int32(temp),16));
-                                write(obj.s,tempbyte(2),"uint8");
+                                %write(obj.s,tempbyte(2),"uint8");
+                                putByte(obj,tempbyte(2));
 
                                 tempbyte(3) = uint8(bitsrl(int32(temp),8));
-                                write(obj.s,tempbyte(3),"uint8");
+                                %write(obj.s,tempbyte(3),"uint8");
+                                putByte(obj,tempbyte(3));
 
                                 % write Lowbyte + CR + LF
                                 tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
-                                writeline(obj.s,char(tempbyte(4)) ); 
+                                %writeline(obj.s,char(tempbyte(4)) );
+                                putByte(obj,tempbyte(4));
+                                putByte(obj,0x0D);
+                                putByte(obj,0x0A);
                             catch
                                 
 %------>>>>>>>> BUG : string wird doppel geschrieben --> TO BE FIXED
@@ -379,7 +394,7 @@ classdef PPG_GUI < handle
                         case 0x13
                     end
                 end 
-            end
+            
             obj.txa_inputForm.Value = '';
             
         end
@@ -387,12 +402,15 @@ classdef PPG_GUI < handle
 %% MSG Receiver
   
         function msgRCV(obj)
-            msg = read(obj.s,1,"uint8");
+            %msg = read(obj.s,1,"uint8");
+            msg = readByte(obj);
             
             if (msg ~= 0x0D) && (msg ~= 0x0A) 
                 obj.asc_buffer(end+1) = char(msg);
             end
             obj.hex_buffer(end+1) = msg;
+            
+            %refresh_screen(obj);
 
                       
             % Make int32 from multiple Databytes            
@@ -487,7 +505,50 @@ classdef PPG_GUI < handle
         end
         
 %% Send Data
-
+            
+        function putByte(obj,dataOut)
+            switch obj.SERIALPORTTYPE
+                case 0  %old serialport interface
+                    
+                    try
+                        fwrite(obj.s,dataOut,"uint8");
+                    catch
+                        put_msg_on_screen(obj,'Übertragung fehlgeschlagen');
+                    end
+                    
+                case 1  %new serialport interface
+                    
+                    try
+                        write(obj.s,dataOut,"uint8");
+                    catch
+                        put_msg_on_screen(obj,'Übertragung fehlgeschlagen');
+                    end
+                    
+            end
+        end
+        
+        function dataIn = readByte(obj)
+            switch obj.SERIALPORTTYPE
+                case 0  %old serialport interface
+                    
+                    try
+                        dataIn = fread(obj.s,1,"uint8");
+                    catch
+                        put_msg_on_screen(obj,'Fehler beim Auslesen der Schnittstelle');
+                        
+                    end
+                    
+                case 1  %new serialport interface
+                    
+                    try
+                         dataIn = read(obj.s,1,"uint8");
+                    catch
+                        put_msg_on_screen(obj,'Fehler beim Auslesen der Schnittstelle');
+                    end
+                    
+            end
+        end
+        
         function sendData(obj)
             if obj.SEND_DATA == 1
                 if loadFile(obj) == 1
@@ -528,21 +589,27 @@ classdef PPG_GUI < handle
                 %temp = table2array(obj.signalData(obj.signalDataIndex,1));
                 temp = obj.signalData(obj.signalDataIndex,1);
                 %write Headerbyte
-                write(obj.s,0x12,"uint8");
+                %write(obj.s,0x12,"uint8");
+                putByte(obj,0x12);
                 
                 %write seperated Databytes Highbyte to Lowbyte
                 tempbyte(1) = uint8(bitsrl(int32(temp),24));
-                write(obj.s,tempbyte(1),"uint8");
+                %write(obj.s,tempbyte(1),"uint8");
+                putByte(obj,tempbyte(1));
                 
                 tempbyte(2) = uint8(bitsrl(int32(temp),16));
-                write(obj.s,tempbyte(2),"uint8");
+                %write(obj.s,tempbyte(2),"uint8");
+                putByte(obj,tempbyte(2));
                 
                 tempbyte(3) = uint8(bitsrl(int32(temp),8));
-                write(obj.s,tempbyte(3),"uint8");
+                %write(obj.s,tempbyte(3),"uint8");
+                putByte(obj,tempbyte(3));
                 
                 tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
-                writeline(obj.s,char(tempbyte(4)) ); % write Lowbyte + CR + LF
-                
+                %writeline(obj.s,char(tempbyte(4)) ); % write Lowbyte + CR + LF
+                putByte(obj,tempbyte(4));
+                putByte(obj,0x0D);
+                putByte(obj,0x0A);
               
                 %increment Data Indice
                 obj.signalDataIndex = obj.signalDataIndex + 1;
@@ -598,7 +665,7 @@ classdef PPG_GUI < handle
                 msg); 
             obj.NUM_ARR{end+1} = sprintf('%s ',...
                 msg);  
-        
+            refresh_screen(obj);
         end
         
  %% Data Files
