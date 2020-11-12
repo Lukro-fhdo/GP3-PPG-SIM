@@ -11,7 +11,7 @@ classdef PPG_GUI < handle
         fig;
         
         % DEBUGFLAGS
-        SERIALPORTTYPE = 1; % select serialport 0 = old, 1= new
+        SERIALPORTTYPE = 0; % select serialport 0 = old, 1= new
         
         % GUI Elements:
         
@@ -65,7 +65,7 @@ classdef PPG_GUI < handle
         signalData = {};
         signalDataIndex = 1;
         signalLength ;
-        signalFs = 50; %Samplefrequenz = 30Hz   
+        signalFs = 10; %Samplefrequenz = 30Hz   
         
         signaltimer;
         
@@ -252,8 +252,8 @@ classdef PPG_GUI < handle
                                     obj.dd_selBAUD.Value,'Terminator','CR/LF');
                     obj.s.BytesAvailableFcnCount = 1;
                     obj.s.BytesAvailableFcnMode = 'byte';
-                    %obj.s.BytesAvailableFcn = @(~,~)(msgRCV(obj));
-                    obj.s.BytesAvailableFcn = @obj.msgRCV;
+                    obj.s.BytesAvailableFcn = @(~,~)(msgRCV(obj));
+                    %obj.s.BytesAvailableFcn = @obj.msgRCV;
                     
                     %open Serial port:
                     fopen(obj.s);
@@ -361,11 +361,13 @@ classdef PPG_GUI < handle
                 
                                 %write Headerbyte
                                 %write(obj.s,0x12,"uint8");
-                                putByte(obj,0x12);
+                                
 
                                 %write seperated Databytes Highbyte to Lowbyte
                                 tempbyte(1) = uint8(bitsrl(int32(temp),24));
                                 %write(obj.s,tempbyte(1),"uint8");
+                                
+                                putByte(obj,0x12);
                                 putByte(obj,tempbyte(1));
 
                                 tempbyte(2) = uint8(bitsrl(int32(temp),16));
