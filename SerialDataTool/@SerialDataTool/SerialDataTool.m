@@ -31,6 +31,10 @@ classdef SerialDataTool < handle
             %obj.test;
             
             obj.myGui = GUI;
+            
+            % Serial Eventlistener
+            
+            obj.L_SerByteAvb            = listener(obj.mySerial,'BytesAvailableFcn',@obj.s_readByte);
            
             % GUI Eventlistener
             
@@ -76,7 +80,7 @@ classdef SerialDataTool < handle
                 msg = obj.myGui.getMsg;
                 
                 for i = 1 : length(msg) 
-                    obj.mySerial.write(msg(i));
+                    obj.mySerial.writeByte(msg(i));
                 end
          end
          

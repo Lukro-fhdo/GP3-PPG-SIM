@@ -22,7 +22,7 @@ classdef SerialCom < handle
             disp(msg);
         end
         
-        write(obj);
+        writeByte(obj,dataOut);
     end
 end
 
