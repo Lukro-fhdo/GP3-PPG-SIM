@@ -13,8 +13,9 @@ classdef SerialDataTool < handle
         s_Port
         s_Baud
         
-        %listener
+        %Serial listener
         L_SerByteAvb
+        L_ScreenMsgAvb 
         
         %gui Listener
         L_dd_portSelect;
@@ -32,10 +33,10 @@ classdef SerialDataTool < handle
             
             obj.myGui = GUI;
             
+            
             % Serial Eventlistener
             
-            obj.L_SerByteAvb            = listener(obj.mySerial,'BytesAvailableFcn',@obj.s_readByte);
-           
+          
             % GUI Eventlistener
             
             obj.L_dd_portSelect         = listener(obj.myGui,'evt_dd_portSelectFcn',@obj.gui_updatePortList);
@@ -49,26 +50,38 @@ classdef SerialDataTool < handle
             obj.L_btn_sendDate          = listener(obj.myGui,'evt_btn_sendDateFcn',@obj.gui_updatePortList);
         end
         
-%         function  test(obj)
-%             obj.list = serialportlist;
-%             port = obj.list(4);
-%             baud = 9600;
-%             obj.mySerial = SerialCom(port,baud);
-%             obj.mySerial.open;
-%             %obj.mySerial.close;
-%             obj.L_SerByteAvb = listener(obj.mySerial,'BytesAvailableFcn',@obj.s_readByte);
-%         end
+        function delete(obj)
+% ------->  % delete all objects, timer and serial interfaces
+% ------->  !!!!!            
+        end
         
-%% Event Listener
+
+        
+%% Event Listener GUI
+        function gui_screenMsg(obj,~,~)
+            tmp = obj.mySerial.guiMsg;
+            obj.myGui.newLine;
+            obj.myGui.writeOnScreen(tmp);
+            obj.myGui.newLine;
+            obj.myGui.refreshScreen;
+        end
+            
          function gui_updatePortList(obj,~,~)
          end
          
          function gui_ConnectSerial(obj,~,~)
              [obj.s_Baud,obj.s_Port]= obj.myGui.getSerialPara;
              obj.mySerial = SerialCom(obj.s_Port,obj.s_Baud);
+             
+             %Set Listener
+             obj.L_ScreenMsgAvb          = listener(obj.mySerial,'ScreenMsgFcn',@obj.gui_screenMsg);
+            
+             obj.L_SerByteAvb            = listener(obj.mySerial,'BytesAvailableFcn',@obj.s_readByte);
+     
              if obj.mySerial.open
                  obj.myGui.showConnected;
              end
+             
          end
          
          function gui_DisconnectSerial(obj,~,~)
@@ -87,20 +100,13 @@ classdef SerialDataTool < handle
          function gui_SendData(obj,~,~)
          end
        
-        
+%% EVENTLISTENER UART       
         function s_readByte(obj,~,~)
             data = obj.mySerial.readByte;
-            disp(data);
-        
+            disp(data);        
         end
         
-        function burstwrite(obj)
-            tic;
-            for n = 1:100
-                obj.mySerial.writeByte(n);
-            end
-            toc;
-        end
+
     end
 end
 

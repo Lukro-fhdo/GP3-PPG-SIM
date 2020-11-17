@@ -2,14 +2,20 @@ classdef SerialCom < handle
     %SERIALCOM Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
+    properties %Private
         s_obj;
         s_port;
         s_baud;
         s_classType = 1; % 0 --> "serial" class, 1 --> "serialport" class
     end
+    
+    properties %public
+        guiMsg
+        
+    end
     events
         BytesAvailableFcn;
+        ScreenMsgFcn;
     end
     methods
         function obj = SerialCom(s_port,s_baud)
@@ -20,6 +26,8 @@ classdef SerialCom < handle
         
         function putMsg(obj,msg)
             disp(msg);
+            obj.guiMsg = msg;
+            notify(obj,'ScreenMsgFcn');
         end
         
         writeByte(obj,dataOut);

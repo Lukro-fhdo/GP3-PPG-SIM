@@ -37,16 +37,9 @@ classdef GUI < handle
         x;
         
         %Data Buffer
-        tmp_Buffer = int32(0);
-        asc_buffer = [];
-        hex_buffer = [];
-
-        Buffersize = 256;
-        Buffer;
-        numBytes = 0;
-        ASCII_ARR = {};
-        HEX_ARR = {};
-        NUM_ARR = {};
+        ASCII_ARR ="";
+        HEX_ARR = "";
+        NUM_ARR = "";
         
         %SignalFiles
         signalFileListing;
@@ -91,7 +84,7 @@ classdef GUI < handle
             buildGUI(obj);  
             
             %init Buffer
-            obj.Buffer = zeros(1,obj.Buffersize);
+            %obj.Buffer = zeros(1,obj.Buffersize);
                      
         end
         
@@ -113,6 +106,10 @@ classdef GUI < handle
         
         function evt_dd_portSelectCBF(obj,~,~)
             notify(obj,'evt_dd_portSelectFcn');            
+        end
+        
+        function evt_dd_showAsciiCBF(obj,~,~)
+            refreshScreen(obj);           
         end
         
         function evt_btn_clearScreenCBF(obj,~,~)
@@ -138,7 +135,8 @@ classdef GUI < handle
         showConnected(obj);
         showDisconnected(obj);
         msg = getMsg(obj);
-
-        
+        writeOnScreen(obj,byte)
+        refreshScreen(obj)
+        newLine(obj)
     end
 end

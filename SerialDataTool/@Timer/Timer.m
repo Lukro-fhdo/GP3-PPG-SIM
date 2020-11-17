@@ -6,18 +6,20 @@ classdef Timer < handle
         signalTimer;
         signalFs;
         signalT;
+        cycles
     end
     events
         TimerIntFCN;
     end
     
     methods
-        function obj = Timer(samplerate)
+        function obj = Timer(samplerate,cycles)
             
             obj.signalFs = samplerate;
             obj.signalT = 1/samplerate;
+            obj.cycles = cycles
             obj.signalTimer = timer('Period',obj.signalT,...
-                        'TasksToExecute', Inf,'ExecutionMode','fixedRate');
+                        'TasksToExecute', cycles,'ExecutionMode','fixedRate');
                     
             %configure timer callback
             obj.signalTimer.TimerFcn = @obj.timerIntCBF;
