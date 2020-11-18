@@ -56,12 +56,15 @@ classdef GUI < handle
         SEND_DATA = 1;
         SHOW_OUTGOING;
         
-        %COM FLAGS:
-        ASCII_CR = 0;
-        CTRL_BYTE = 1;
-        DATA_BYTE = 2;
-        ERROR_BYTE = 3;
-        HEADER = 0;
+%         %COM FLAGS:
+%         ASCII_CR = 0;
+%         CTRL_BYTE = 1;
+%         DATA_BYTE = 2;
+%         ERROR_BYTE = 3;
+%         HEADER = 0;
+    end
+    properties
+        msgToSend = 0;
     end
     
 %% Events    
@@ -113,7 +116,7 @@ classdef GUI < handle
         end
         
         function evt_btn_clearScreenCBF(obj,~,~)
-            
+            obj.clearScreen;  
         end
         
         function evt_btn_connectSerialCBF(obj,~,~)
@@ -125,6 +128,7 @@ classdef GUI < handle
         end
         
         function evt_btn_sendMsgCBF(obj,~,~)
+            obj.msgToSend = obj.txa_inputForm.Value;
             notify(obj,'evt_btn_sendMsgFcn');
         end
         
@@ -134,9 +138,15 @@ classdef GUI < handle
         
         showConnected(obj);
         showDisconnected(obj);
+        
         msg = getMsg(obj);
-        writeOnScreen(obj,byte)
-        refreshScreen(obj)
-        newLine(obj)
+        headerbyte = getHeaderbyte(obj);
+        
+        writeOnScreen(obj,byte,base)
+        writelineOnScreen(obj,str)
+        newLine(obj);
+        
+        refreshScreen(obj);        
+        clearScreen(obj);
     end
 end

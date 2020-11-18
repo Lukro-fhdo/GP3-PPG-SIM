@@ -3,6 +3,20 @@ classdef SerialDataTool < handle
     %   Detailed explanation goes here
     
     properties
+        %Protocoll
+        %--Headerbytes--
+        HB_CTRL = 0x11;
+        HB_DATA = 0x12;
+        HB_ERR  = 0x13;
+        
+        %--Terminatorbytes--
+        PT_CR   = 0x0D;
+        PT_LF   = 0x0A;
+        
+        %--Flagbytes---
+        F_HEADERBYTE = 0;
+        F_CR = 0;
+        F_ENDPKG
         
         %Objects
         mySerial
@@ -55,13 +69,15 @@ classdef SerialDataTool < handle
 % ------->  !!!!!            
         end
         
+%% Memberfunctions
+        readProtocol(obj);
 
         
 %% Event Listener GUI
         function gui_screenMsg(obj,~,~)
             tmp = obj.mySerial.guiMsg;
             obj.myGui.newLine;
-            obj.myGui.writeOnScreen(tmp);
+            obj.myGui.writelineOnScreen(tmp);
             obj.myGui.newLine;
             obj.myGui.refreshScreen;
         end
@@ -90,11 +106,27 @@ classdef SerialDataTool < handle
          end
          
          function gui_SendMessage(obj,~,~)
+             
+                %get data to send from Gui
+                headerbyte = obj.myGui.getHeaderbyte;
                 msg = obj.myGui.getMsg;
-                
-                for i = 1 : length(msg) 
-                    obj.mySerial.writeByte(msg(i));
-                end
+            
+                %check if msg is empty
+                if ~isempty(msg)
+                    
+                    %check if Headerbyte != 0
+                    if ~isequal(headerbyte,0x00)
+                        obj.mySerial.writeByte(headerbyte);
+                    end %end if
+                    
+                    for i = 1 : length(msg) 
+                        obj.mySerial.writeByte(msg(i));
+                    end
+                    
+                    %write CR+LF 
+                    obj.mySerial.writeByte(obj.PT_CR);
+                    obj.mySerial.writeByte(obj.PT_LF);
+                end %end if
          end
          
          function gui_SendData(obj,~,~)
@@ -102,8 +134,7 @@ classdef SerialDataTool < handle
        
 %% EVENTLISTENER UART       
         function s_readByte(obj,~,~)
-            data = obj.mySerial.readByte;
-            disp(data);        
+            obj.readProtocol;
         end
         
 
