@@ -19,6 +19,11 @@ classdef SerialDataTool < handle
         F_ENDPKG = 0;
         SEND_DATA = 1;
         
+        %Plot Date
+        tmp_Buffer = uint32(0);
+        Buffersize = 256;
+        Buffer;
+        n_x
         
         %Objects
         mySerial;
@@ -30,6 +35,7 @@ classdef SerialDataTool < handle
         sd_Data = {};
         sd_DataIndex = 1;
         sd_length = 0;
+        numBytes;
         
         %Serial
         s_Port;
@@ -59,7 +65,7 @@ classdef SerialDataTool < handle
             %obj.test;
             
             obj.myGui = GUI;
-            obj.myTimer = Timer(100);
+            obj.myTimer = Timer(50);
             
             
             % Timer Eventlistener
@@ -202,8 +208,33 @@ classdef SerialDataTool < handle
          end
          function putSample(obj,~,~)
              temp = obj.sd_Data(obj.sd_DataIndex,1);
-             disp(temp);
+             %disp(temp);
              obj.sd_DataIndex = obj.sd_DataIndex + 1;
+             
+             
+                %write Headerbyte
+                obj.mySerial.writeByte(0x12);
+                
+                %write seperated Databytes Highbyte to Lowbyte
+                tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                obj.mySerial.writeByte(tempbyte(1));
+                
+                tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                obj.mySerial.writeByte(tempbyte(2));
+                
+                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                obj.mySerial.writeByte(tempbyte(3));
+                
+                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                obj.mySerial.writeByte(tempbyte(4)); 
+                
+                %write CR+LF
+                obj.mySerial.writeByte(0x0D);
+                obj.mySerial.writeByte(0x0A);
+                
+              
+             
+             
          end       
 %% EVENTLISTENER UART       
         function s_readByte(obj,~,~)

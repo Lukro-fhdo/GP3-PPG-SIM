@@ -1,6 +1,29 @@
 function readProtocol(obj)
     msg = obj.mySerial.readByte();
     obj.myGui.writeOnScreen(msg,'HEX');
+    obj.myGui.refreshScreen;
+    %check for Data Payload
+    if obj.F_HEADERBYTE == obj.HB_DATA
+        
+    % Make int32 from multiple Databytes  
+        obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
+
+        %obj.asc_buffer(end+1) = msg; 
+        obj.numBytes = obj.numBytes + 1;
+
+        % Payload on Data max. 4 Bytes --> break
+        if obj.numBytes > 3
+            %reinitialize flags to 0
+            obj.numBytes = uint32(0);
+            obj.HEADER = 0x00;
+            msg = 0;
+
+            % enable Plotting for completed data transmission
+            obj.DATA_TO_PLOT = 1;
+        end
+
+    end
+    
     
     %check for Headerbyte
     if obj.F_HEADERBYTE == 0x00 %Headerbyte received before?
