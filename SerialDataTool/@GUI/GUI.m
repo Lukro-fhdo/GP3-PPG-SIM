@@ -43,7 +43,7 @@ classdef GUI < handle
         
         %SignalFiles
         signalFileListing;
-        signalPath = 'signaldata/Data01.mat' ;
+        signalPath = '' ;
         signalData = {};
         signalDataIndex = 1;
         signalLength ;
@@ -101,6 +101,7 @@ classdef GUI < handle
                 case 'OK'
 
                     delete(obj.fig)
+% ----> call destructor for upper class                    
 
                 case 'Cancel'
                     return
@@ -136,17 +137,17 @@ classdef GUI < handle
             notify(obj,'evt_btn_sendDateFcn');
         end
         
-        showConnected(obj);
-        showDisconnected(obj);
-        
-        msg = getMsg(obj);
-        headerbyte = getHeaderbyte(obj);
-        
-        writeOnScreen(obj,byte,base)
-        writelineOnScreen(obj,str)
-        newLine(obj);
-        
-        refreshScreen(obj);        
-        clearScreen(obj);
+%         showConnected(obj);
+%         showDisconnected(obj);
+%         
+%         msg = getMsg(obj);
+%         headerbyte = getHeaderbyte(obj);
+%         
+%         writeOnScreen(obj,byte,base)
+%         writelineOnScreen(obj,str)
+%         newLine(obj);
+%         
+%         refreshScreen(obj);        
+%         clearScreen(obj);
     end
 end

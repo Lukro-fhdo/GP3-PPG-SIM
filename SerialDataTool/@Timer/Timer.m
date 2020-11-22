@@ -8,29 +8,37 @@ classdef Timer < handle
         signalT;
         cycles
     end
+    properties
+        guiMsg
+    end
     events
-        TimerIntFCN;
+        evt_TimerIntFcn;
+        evt_TimerStopFcn;
+        evt_TimerScreenMsgFcn;
     end
     
     methods
-        function obj = Timer(samplerate,cycles)
+        function obj = Timer(samplerate)
             
             obj.signalFs = samplerate;
             obj.signalT = 1/samplerate;
-            obj.cycles = cycles
-            obj.signalTimer = timer('Period',obj.signalT,...
-                        'TasksToExecute', cycles,'ExecutionMode','fixedRate');
-                    
-            %configure timer callback
-            obj.signalTimer.TimerFcn = @obj.timerIntCBF;
-
+            
         end
+        
+        
         
         function putMsg(obj,msg)
             disp(msg);
+            obj.guiMsg = msg;
+            notify(obj,'evt_TimerScreenMsgFcn');
         end
         
-       
+        %timerIntCBF(obj,~,~);
+        %timerStopCBF(obj,~,~);
+        
+        
+        
+       %state = startTimer(obj);
     end
 end
 
