@@ -1,4 +1,4 @@
-function plotSample(obj,n_xAxis)
+function setPlotSample(obj,n_xAxis)
 % calculating x-achsis Label : first Data at x = 0
             obj.x = ((n_xAxis - obj.Buffersize + 1) : n_xAxis);
             

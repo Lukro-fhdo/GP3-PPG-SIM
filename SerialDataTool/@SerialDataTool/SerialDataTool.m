@@ -23,7 +23,8 @@ classdef SerialDataTool < handle
         tmp_Buffer = uint32(0);
         Buffersize = 256;
         Buffer;
-        n_x
+        n_xAxis = 0;
+        x;
         
         %Objects
         mySerial;
@@ -35,7 +36,7 @@ classdef SerialDataTool < handle
         sd_Data = {};
         sd_DataIndex = 1;
         sd_length = 0;
-        numBytes;
+        numBytes = 0;
         
         %Serial
         s_Port;
@@ -65,7 +66,10 @@ classdef SerialDataTool < handle
             %obj.test;
             
             obj.myGui = GUI;
-            obj.myTimer = Timer(50);
+            obj.myTimer = Timer(5);
+            
+            %init plotbuffer
+            obj.Buffer = zeros(1,obj.Buffersize);
             
             
             % Timer Eventlistener
@@ -163,10 +167,36 @@ classdef SerialDataTool < handle
                         obj.mySerial.writeByte(headerbyte);
                     end %end if
                     
-                    for i = 1 : length(msg) 
-                        obj.mySerial.writeByte(msg(i));
+                    if isequal(headerbyte,obj.HB_DATA)
+                         try % write only numbers 
+                                temp = str2num(msg);
+                
+                                %write Headerbyte
+                                %write(obj.s,0x12,"uint8");
+                                
+
+                                %write seperated Databytes Highbyte to Lowbyte
+                                tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                                obj.mySerial.writeByte(tempbyte(1));
+
+                                tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                                obj.mySerial.writeByte(tempbyte(2));
+
+                                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                                obj.mySerial.writeByte(tempbyte(3));
+
+                                % write Lowbyte
+                                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                                obj.mySerial.writeByte(tempbyte(4));
+                                
+                         catch
+                             
+                         end
+                    else
+                        for i = 1 : length(msg) 
+                            obj.mySerial.writeByte(msg(i));
+                        end
                     end
-                    
                     %write CR+LF 
                     obj.mySerial.writeByte(obj.PT_CR);
                     obj.mySerial.writeByte(obj.PT_LF);
@@ -188,13 +218,13 @@ classdef SerialDataTool < handle
              else
 %                  temp = obj.sd_Data(obj.sd_DataIndex,1);
 %                  disp(temp);
-                if ~isempty (obj.myTimer.signalTimer)
+                %if ~isempty (obj.myTimer.signalTimer)
                     stop(obj.myTimer.signalTimer);
                     delete(obj.myTimer.signalTimer)
 %------> deletefunction for timer!!!!!!!!
 %------> deletefunction for timer!!!!!!!!
 %------> deletefunction for timer!!!!!!!!
-                end
+                %end
 %------> stopfunction for timer!!!!!!!!
 %------> stopfunction for timer!!!!!!!!
 %------> stopfunction for timer!!!!!!!!

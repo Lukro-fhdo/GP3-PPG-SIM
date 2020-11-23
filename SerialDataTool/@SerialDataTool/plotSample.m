@@ -11,6 +11,11 @@ function plotSample(obj)
                     obj.tmp_Buffer = 0;
 
                     % call plotfunction if enabled
-                    obj.myGui.plotSample(obj.n_xAxis);
+                    %obj.myGui.setPlotSample(obj.n_xAxis);
+                    obj.x = ((obj.n_xAxis - obj.Buffersize + 1) : obj.n_xAxis);
+            
+                    plot(obj.myGui.ax_plot, obj.x, obj.Buffer);
+            
+                    obj.myGui.ax_plot.XLim = [(obj.n_xAxis - obj.Buffersize + 1) obj.n_xAxis];    
 end
 

@@ -15,11 +15,14 @@ function readProtocol(obj)
         if obj.numBytes > 3
             %reinitialize flags to 0
             obj.numBytes = uint32(0);
-            obj.HEADER = 0x00;
+            obj.F_HEADERBYTE = 0x00;
             msg = 0;
 
             % enable Plotting for completed data transmission
-            obj.DATA_TO_PLOT = 1;
+            %obj.DATA_TO_PLOT = 1;
+            
+            obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
+            obj.plotSample;
         end
 
     end

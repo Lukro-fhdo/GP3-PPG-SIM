@@ -34,6 +34,8 @@ classdef GUI < handle
         % Plotter
         ax_plot;
         n_xAxis = 0;
+        Buffersize = 256;
+        Buffer;
         x;
         
         %Data Buffer
@@ -87,7 +89,7 @@ classdef GUI < handle
             buildGUI(obj);  
             
             %init Buffer
-            %obj.Buffer = zeros(1,obj.Buffersize);
+            obj.Buffer = zeros(1,obj.Buffersize);
                      
         end
         
@@ -136,7 +138,7 @@ classdef GUI < handle
         function evt_btn_sendDateCBF(obj,~,~)
             notify(obj,'evt_btn_sendDateFcn');
         end
-        
+        setPlotSample(obj,n_xAxis)
 %         showConnected(obj);
 %         showDisconnected(obj);
 %         
