@@ -5,7 +5,7 @@ function  writeOnScreen(obj,byte,base)
         case 3 % if specified onl one base is written to screenbuffer
             switch base
                 case 'HEX'
-                    hex = sprintf("%02X ",byte);
+                    hex = sprintf(" 0x%02X ,",byte);
                     obj.HEX_ARR(end) = append(obj.HEX_ARR(end),hex);
                 case 'DEC'
                     dec = sprintf("%d",byte);

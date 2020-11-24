@@ -220,7 +220,7 @@ classdef SerialDataTool < handle
 %                  disp(temp);
                 %if ~isempty (obj.myTimer.signalTimer)
                     stop(obj.myTimer.signalTimer);
-                    delete(obj.myTimer.signalTimer)
+                    %stop(timerfindall)
 %------> deletefunction for timer!!!!!!!!
 %------> deletefunction for timer!!!!!!!!
 %------> deletefunction for timer!!!!!!!!

@@ -28,7 +28,8 @@ function state = open(obj)
             try
                obj.s_obj = serialport(obj.s_port,obj.s_baud);
                configureCallback(obj.s_obj,"Byte",1,@obj.BytesAvailableCBF)
-
+               obj.s_obj.FlowControl = 'software';
+               flush(obj.s_obj);
                state = 1;
                
                msg = 'Verbindung erfolgreich';

@@ -7,6 +7,7 @@ function refreshScreen(obj)
     elseif (obj.dd_showASCII.Value == 2)
 
         obj.txa_outputWindow.Value = obj.HEX_ARR;
+        %disp(obj.HEX_ARR);
 
     else
         obj.txa_outputWindow.Value = obj.NUM_ARR;
