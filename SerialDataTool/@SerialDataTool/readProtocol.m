@@ -25,7 +25,7 @@ function readProtocol(obj)
             %obj.DATA_TO_PLOT = 1;
             
             obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
-            %obj.plotSample;
+            obj.plotSample;
         end
 
     end

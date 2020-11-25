@@ -28,7 +28,7 @@ function state = open(obj)
             try
                obj.s_obj = serialport(obj.s_port,obj.s_baud);
                %configureCallback(obj.s_obj,"byte",1,@obj.BytesAvailableCBF)
-               %obj.s_obj.FlowControl = 'software';
+               obj.s_obj.FlowControl = 'none';
                flush(obj.s_obj);
                state = 1;
                

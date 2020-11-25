@@ -31,6 +31,7 @@ classdef SerialDataTool < handle
         myGui;
         SendTimer;
         ReadTimer;
+        GuiUpdateTimer;
         
         %Signal Data
         sd_path;
@@ -42,6 +43,7 @@ classdef SerialDataTool < handle
         %Serial
         s_Port;
         s_Baud;
+        s_Buffer;
         
         %Serial listener
         L_SerByteAvb;
@@ -70,10 +72,10 @@ classdef SerialDataTool < handle
         function obj = SerialDataTool()
                         
             obj.myGui = GUI;
-            obj.SendTimer = Timer(50);
-            obj.ReadTimer = Timer(5);
+            obj.SendTimer = Timer(15);
+            obj.ReadTimer = Timer(3);
             
-            obj.ReadTimer.init(inf);
+            
             
             
             %init plotbuffer
@@ -114,6 +116,7 @@ classdef SerialDataTool < handle
         readProtocol(obj);
         function closeAll(obj,~,~)
             stop(timerfindall);
+            delete(timerfindall);
             delete(obj.mySerial);
             delete(obj.myGui);
             delete(obj);
@@ -160,6 +163,7 @@ classdef SerialDataTool < handle
              
              if obj.mySerial.open
                  obj.myGui.showConnected;
+                 obj.ReadTimer.init(inf);
                  obj.ReadTimer.startTimer;
              end
              
@@ -248,26 +252,28 @@ classdef SerialDataTool < handle
              
          end
          function putSample(obj,~,~)
+             
              temp = obj.sd_Data(obj.sd_DataIndex,1);
              %disp(temp);
              obj.sd_DataIndex = obj.sd_DataIndex + 1;
-             
+             %split temp sample in 4 single bytes
+             tempbyte = typecast(uint32(temp),'uint8');
              
                 %write Headerbyte
                 obj.mySerial.writeByte(0x12);
                 
                 %write seperated Databytes Highbyte to Lowbyte
-                tempbyte(1) = uint8(bitsrl(int32(temp),24));
-                obj.mySerial.writeByte(tempbyte(1));
                 
-                tempbyte(2) = uint8(bitsrl(int32(temp),16));
-                obj.mySerial.writeByte(tempbyte(2));
+                obj.mySerial.writeByte(tempbyte(4));
                 
-                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                
                 obj.mySerial.writeByte(tempbyte(3));
                 
-                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
-                obj.mySerial.writeByte(tempbyte(4)); 
+                
+                obj.mySerial.writeByte(tempbyte(2));
+                
+                
+                obj.mySerial.writeByte(tempbyte(1)); 
                 
                 %write CR+LF
                 obj.mySerial.writeByte(0x0D);
@@ -279,7 +285,9 @@ classdef SerialDataTool < handle
          end       
 %% EVENTLISTENER UART       
         function s_readByte(obj,~,~)
+            
             obj.readProtocol;
+            
         end
         
         function ReadData(obj,~,~)
@@ -289,8 +297,9 @@ classdef SerialDataTool < handle
 
               disp(n_bytesavb);
               for i = 1 : n_bytesavb
-                obj.readProtocol;
+                %obj.readProtocol;
               end%end for
+              
             end %end if
         end%end function
         
