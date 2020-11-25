@@ -29,7 +29,8 @@ classdef SerialDataTool < handle
         %Objects
         mySerial;
         myGui;
-        myTimer;
+        SendTimer;
+        ReadTimer;
         
         %Signal Data
         sd_path;
@@ -51,6 +52,8 @@ classdef SerialDataTool < handle
         L_TimerStop;
         L_TimerScreenMsgAvb;
         
+        L_ReadTimerInt 
+        
         %gui Listener
         L_dd_portSelect;
         
@@ -59,25 +62,34 @@ classdef SerialDataTool < handle
         L_btn_disconnectSerial;
         L_btn_sendMsg;
         L_btn_sendDate;
+        
+        L_closeGui
     end
     
     methods
         function obj = SerialDataTool()
-            %obj.test;
-            
+                        
             obj.myGui = GUI;
-            obj.myTimer = Timer(5);
+            obj.SendTimer = Timer(50);
+            obj.ReadTimer = Timer(5);
+            
+            obj.ReadTimer.init(inf);
+            
             
             %init plotbuffer
             obj.Buffer = zeros(1,obj.Buffersize);
             
             
-            % Timer Eventlistener
-            obj.L_TimerScreenMsgAvb     =listener(obj.myTimer,'evt_TimerScreenMsgFcn',@obj.gui_screenMsgTimer); 
+            % SendTimer Eventlistener
+            obj.L_TimerScreenMsgAvb     =listener(obj.SendTimer,'evt_TimerScreenMsgFcn',@obj.gui_screenMsgTimer); 
             
-            obj.L_TimerInt              =listener(obj.myTimer,'evt_TimerIntFcn',@obj.putSample);   
+            obj.L_TimerInt              =listener(obj.SendTimer,'evt_TimerIntFcn',@obj.putSample);   
             
-            obj.L_TimerStop             =listener(obj.myTimer,'evt_TimerStopFcn',@obj.gui_SendData);  
+            obj.L_TimerStop             =listener(obj.SendTimer,'evt_TimerStopFcn',@obj.gui_SendData);  
+            
+            %ReadTimer Eventlistener
+            
+            obj.L_ReadTimerInt          =listener(obj.ReadTimer,'evt_TimerIntFcn',@obj.ReadData);
           
             % GUI Eventlistener
             
@@ -90,6 +102,8 @@ classdef SerialDataTool < handle
             obj.L_btn_sendMsg           = listener(obj.myGui,'evt_btn_sendMsgFcn',@obj.gui_SendMessage);
             
             obj.L_btn_sendDate          = listener(obj.myGui,'evt_btn_sendDateFcn',@obj.gui_SendData);
+            
+            obj.L_closeGui              = listener(obj.myGui,'evt_closeGuiFcn',@obj.closeAll);
         end
         
         function delete(obj)
@@ -98,17 +112,20 @@ classdef SerialDataTool < handle
         
 %% Memberfunctions
         readProtocol(obj);
-
+        function closeAll(obj,~,~)
+            stop(timerfindall);
+            delete(obj.mySerial);
+            delete(obj.myGui);
+            delete(obj);
+            
+        end
         
 %% Event Listener GUI
         function gui_screenMsgSerial(obj,~,~)
 
             tmp = obj.mySerial.guiMsg;
             obj.gui_screenMsg(tmp);
-%             obj.myGui.newLine;
-%             obj.myGui.writelineOnScreen(tmp);
-%             obj.myGui.newLine;
-%             obj.myGui.refreshScreen;
+
         end
         
         function gui_screenMsg(obj,msg)
@@ -121,12 +138,9 @@ classdef SerialDataTool < handle
         
         function gui_screenMsgTimer(obj,~,~)
 
-            tmp = obj.myTimer.guiMsg;   
+            tmp = obj.SendTimer.guiMsg;   
             obj.gui_screenMsg(tmp);
-%             obj.myGui.newLine;
-%             obj.myGui.writelineOnScreen(tmp);
-%             obj.myGui.newLine;
-%             obj.myGui.refreshScreen;
+
         end
             
          function gui_updatePortList(obj,~,~)
@@ -141,16 +155,22 @@ classdef SerialDataTool < handle
              obj.L_ScreenMsgAvb          = listener(obj.mySerial,'ScreenMsgFcn',@obj.gui_screenMsgSerial);
             
              obj.L_SerByteAvb            = listener(obj.mySerial,'BytesAvailableFcn',@obj.s_readByte);
-     
+             
+             
+             
              if obj.mySerial.open
                  obj.myGui.showConnected;
+                 obj.ReadTimer.startTimer;
              end
              
          end
          
          function gui_DisconnectSerial(obj,~,~)
-             obj.mySerial.close;
-             obj.myGui.showDisconnected;
+             if(obj.ReadTimer.stopTimer)
+                 obj.mySerial.close;
+                 obj.myGui.showDisconnected;
+             end
+             
          end
          
          function gui_SendMessage(obj,~,~)
@@ -210,27 +230,18 @@ classdef SerialDataTool < handle
                     obj.myGui.btn_sendData.Text = 'Stop';
                     obj.sd_DataIndex = 1;
                     
-                    obj.myTimer.init(obj.sd_length)
-                    obj.myTimer.startTimer;
+                    obj.SendTimer.init(obj.sd_length)
+                    obj.SendTimer.startTimer;
                 else
                     % ToDo Error Message
                 end
              else
-%                  temp = obj.sd_Data(obj.sd_DataIndex,1);
-%                  disp(temp);
-                %if ~isempty (obj.myTimer.signalTimer)
-                    stop(obj.myTimer.signalTimer);
-                    %stop(timerfindall)
-%------> deletefunction for timer!!!!!!!!
-%------> deletefunction for timer!!!!!!!!
-%------> deletefunction for timer!!!!!!!!
-                %end
-%------> stopfunction for timer!!!!!!!!
-%------> stopfunction for timer!!!!!!!!
-%------> stopfunction for timer!!!!!!!!
-                 %reset button
-              obj.SEND_DATA = 1;
-                 obj.myGui.btn_sendData.Text = 'Send Data';
+
+                stop(obj.SendTimer.signalTimer);
+
+                obj.SEND_DATA = 1;
+                
+                obj.myGui.btn_sendData.Text = 'Send Data';
 
             end
              
@@ -271,7 +282,18 @@ classdef SerialDataTool < handle
             obj.readProtocol;
         end
         
+        function ReadData(obj,~,~)
+            n_bytesavb = obj.mySerial.getNumBytesAvb;
+            %disp(n_bytesavb);
+            if n_bytesavb >0
 
-    end
-end
+              disp(n_bytesavb);
+              for i = 1 : n_bytesavb
+                obj.readProtocol;
+              end%end for
+            end %end if
+        end%end function
+        
+    end%end mehtod
+end%end classdef
 

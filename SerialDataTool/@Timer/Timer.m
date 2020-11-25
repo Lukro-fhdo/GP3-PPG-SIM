@@ -36,7 +36,7 @@ classdef Timer < handle
         %timerIntCBF(obj,~,~);
         %timerStopCBF(obj,~,~);
         
-        
+        state = stopTimer(obj);
         
        %state = startTimer(obj);
     end

@@ -1,4 +1,7 @@
 function readProtocol(obj)
+
+   % configureCallback(obj.mySerial.s_obj,"off");
+   
     msg = obj.mySerial.readByte();
     obj.myGui.writeOnScreen(msg,'HEX');
     obj.myGui.refreshScreen;
@@ -22,7 +25,7 @@ function readProtocol(obj)
             %obj.DATA_TO_PLOT = 1;
             
             obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
-            obj.plotSample;
+            %obj.plotSample;
         end
 
     end
@@ -70,5 +73,7 @@ function readProtocol(obj)
    
     
     obj.myGui.refreshScreen;
+    
+    
 end%end function
 

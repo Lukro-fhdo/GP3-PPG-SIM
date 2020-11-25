@@ -31,6 +31,8 @@ classdef SerialCom < handle
         end
         
         writeByte(obj,dataOut);
+        num = getNumBytesAvb(obj);
+         
     end
 end
 

@@ -20,6 +20,7 @@ classdef GUI < handle
         btn_sendMsg;
         btn_sendData;
         btn_clearScreen
+        btn_clearPlotter;
         
         % Checkboxes
         cb_showASCII;
@@ -77,6 +78,8 @@ classdef GUI < handle
         evt_btn_disconnectSerialFcn;
         evt_btn_sendMsgFcn;
         evt_btn_sendDateFcn;
+        
+        evt_closeGuiFcn;
     end
 
     methods (Access = public)
@@ -101,8 +104,9 @@ classdef GUI < handle
 
             switch selection
                 case 'OK'
-
                     delete(obj.fig)
+                    notify(obj,'evt_closeGuiFcn');
+                    %
 % ----> call destructor for upper class                    
 
                 case 'Cancel'
