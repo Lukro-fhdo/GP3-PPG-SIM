@@ -335,7 +335,7 @@ classdef PPG_GUI < handle
             if (obj.HEADER == obj.DATA_BYTE)                
                 obj.tmp_Buffer = bitor(bitshift(obj.tmp_Buffer,8), msg);
                 
-                %obj.asc_buffer(end+1) = msg;
+                %obj.asc_buffer(end+1) = msg; 
                 obj.numBytes = obj.numBytes + 1;
                 
                 % Payload on Data max. 4 Bytes --> break
