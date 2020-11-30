@@ -69,11 +69,17 @@ classdef SerialDataTool < handle
     end
     
     methods
+        function myerror(~,~,~)
+            disp('error')
+        end
         function obj = SerialDataTool()
                         
             obj.myGui = GUI;
-            obj.SendTimer = Timer(15);
-            obj.ReadTimer = Timer(3);
+            obj.SendTimer = Timer(50);
+            obj.SendTimer.signalTimer.BusyMode = 'error';
+            obj.SendTimer.signalTimer.ErrorFcn = @myerror;
+            
+            obj.ReadTimer = Timer(25);
             
             
             
@@ -114,12 +120,13 @@ classdef SerialDataTool < handle
         
 %% Memberfunctions
         readProtocol(obj);
+        
         function closeAll(obj,~,~)
             stop(timerfindall);
             delete(timerfindall);
-            delete(obj.mySerial);
-            delete(obj.myGui);
-            delete(obj);
+%             delete(obj.mySerial);
+%             delete(obj.myGui);
+%             delete(obj);
             
         end
         
@@ -194,24 +201,24 @@ classdef SerialDataTool < handle
                     if isequal(headerbyte,obj.HB_DATA)
                          try % write only numbers 
                                 temp = str2num(msg);
-                
+                                tempbyte = typecast(uint32(temp),'uint8');
                                 %write Headerbyte
                                 %write(obj.s,0x12,"uint8");
                                 
 
                                 %write seperated Databytes Highbyte to Lowbyte
-                                tempbyte(1) = uint8(bitsrl(int32(temp),24));
-                                obj.mySerial.writeByte(tempbyte(1));
+                                %tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                                obj.mySerial.writeByte(tempbyte(4));
 
-                                tempbyte(2) = uint8(bitsrl(int32(temp),16));
-                                obj.mySerial.writeByte(tempbyte(2));
-
-                                tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                                %tempbyte(2) = uint8(bitsrl(int32(temp),16));
                                 obj.mySerial.writeByte(tempbyte(3));
 
+                                %tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                                obj.mySerial.writeByte(tempbyte(2));
+
                                 % write Lowbyte
-                                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
-                                obj.mySerial.writeByte(tempbyte(4));
+                                %tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                                obj.mySerial.writeByte(tempbyte(1));
                                 
                          catch
                              
@@ -297,9 +304,12 @@ classdef SerialDataTool < handle
 
               disp(n_bytesavb);
               for i = 1 : n_bytesavb
-                %obj.readProtocol;
+                obj.readProtocol;
               end%end for
               
+              %refresh Terminal and Plot after every burstread
+              obj.myGui.refreshScreen;
+              obj.plotSample;
             end %end if
         end%end function
         
