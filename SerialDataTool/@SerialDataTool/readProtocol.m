@@ -26,11 +26,11 @@ function readProtocol(obj)
 
             obj.Buffer = circshift(obj.Buffer,-1);
             %overwrite last data on last array index (data filled in leftside)
-            obj.Buffer(obj.Buffersize) = bitcmp(obj.tmp_Buffer);  
+            obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;  
             obj.tmp_Buffer =0;
             %increment sample counter
             obj.n_xAxis = obj.n_xAxis + 1;
-            obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
+            %obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
             %obj.plotSample;
 
         end

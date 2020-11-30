@@ -194,23 +194,23 @@ classdef SerialDataTool < handle
                     if isequal(headerbyte,obj.HB_DATA)
                          try % write only numbers 
                                 temp = str2num(msg);
-                                tempbyte = typecast(int32(temp),'uint8');
+                
                                 %write Headerbyte
                                 %write(obj.s,0x12,"uint8");
                                 
 
                                 %write seperated Databytes Highbyte to Lowbyte
-                                %tempbyte(1) = uint8(bitsrl(int32(temp),24));
+                                tempbyte(1) = uint8(bitsrl(int32(temp),24));
                                 obj.mySerial.writeByte(tempbyte(1));
 
-                                %tempbyte(2) = uint8(bitsrl(int32(temp),16));
+                                tempbyte(2) = uint8(bitsrl(int32(temp),16));
                                 obj.mySerial.writeByte(tempbyte(2));
 
-                                %tempbyte(3) = uint8(bitsrl(int32(temp),8));
+                                tempbyte(3) = uint8(bitsrl(int32(temp),8));
                                 obj.mySerial.writeByte(tempbyte(3));
 
                                 % write Lowbyte
-                                %tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
+                                tempbyte(4) = uint8(bitand(int32(temp), int32(0x000000FF)));
                                 obj.mySerial.writeByte(tempbyte(4));
                                 
                          catch
@@ -257,7 +257,7 @@ classdef SerialDataTool < handle
              %disp(temp);
              obj.sd_DataIndex = obj.sd_DataIndex + 1;
              %split temp sample in 4 single bytes
-             tempbyte = typecast(int32(temp),'uint8');
+             tempbyte = typecast(uint32(temp),'uint8');
              
                 %write Headerbyte
                 obj.mySerial.writeByte(0x12);
