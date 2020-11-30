@@ -4,7 +4,7 @@ function readProtocol(obj)
    
     msg = obj.mySerial.readByte();
     obj.myGui.writeOnScreen(msg,'HEX');
-    obj.myGui.refreshScreen;
+    %obj.myGui.refreshScreen;
     %check for Data Payload
     if obj.F_HEADERBYTE == obj.HB_DATA
         
@@ -13,9 +13,13 @@ function readProtocol(obj)
 
         %obj.asc_buffer(end+1) = msg; 
         obj.numBytes = obj.numBytes + 1;
+        
+                         
+                    
 
         % Payload on Data max. 4 Bytes --> break
         if obj.numBytes > 3
+           
             %reinitialize flags to 0
             obj.numBytes = uint32(0);
             obj.F_HEADERBYTE = 0x00;
@@ -23,9 +27,14 @@ function readProtocol(obj)
 
             % enable Plotting for completed data transmission
             %obj.DATA_TO_PLOT = 1;
-            
-            obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
-            obj.plotSample;
+            obj.Buffer = circshift(obj.Buffer,-1);
+            %overwrite last data on last array index (data filled in leftside)
+            obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;  
+            obj.tmp_Buffer =0;
+            %increment sample counter
+            obj.n_xAxis = obj.n_xAxis + 1;
+            %obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
+            %obj.plotSample;
         end
 
     end
@@ -41,7 +50,7 @@ function readProtocol(obj)
         case obj.HB_ERR
             obj.F_HEADERBYTE = msg;
         otherwise 
-            obj.myGui.writeOnScreen(msg,'ASCII');
+           % obj.myGui.writeOnScreen(msg,'ASCII');
         
     end%end switch
     end%end if
@@ -72,7 +81,7 @@ function readProtocol(obj)
     end %end if
    
     
-    obj.myGui.refreshScreen;
+    %obj.myGui.refreshScreen;
     
     
 end%end function
