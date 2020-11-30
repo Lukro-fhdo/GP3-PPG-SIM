@@ -6,7 +6,7 @@ classdef SerialCom < handle
         s_obj;
         s_port;
         s_baud;
-        s_classType = 0; % 1 --> "serial" class, 1 --> "serialport" class
+        s_classType = 0; % 0 --> "serial" class, 1 --> "serialport" class
     end
     
     properties %public

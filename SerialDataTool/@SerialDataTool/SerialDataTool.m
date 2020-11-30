@@ -69,17 +69,11 @@ classdef SerialDataTool < handle
     end
     
     methods
-        function myerror(~,~,~)
-            disp('error')
-        end
         function obj = SerialDataTool()
                         
             obj.myGui = GUI;
-            obj.SendTimer = Timer(50);
-            obj.SendTimer.signalTimer.BusyMode = 'error';
-            obj.SendTimer.signalTimer.ErrorFcn = @myerror;
-            
-            obj.ReadTimer = Timer(25);
+            obj.SendTimer = Timer(15);
+            obj.ReadTimer = Timer(3);
             
             
             
@@ -120,13 +114,12 @@ classdef SerialDataTool < handle
         
 %% Memberfunctions
         readProtocol(obj);
-        
         function closeAll(obj,~,~)
             stop(timerfindall);
             delete(timerfindall);
-%             delete(obj.mySerial);
-%             delete(obj.myGui);
-%             delete(obj);
+            delete(obj.mySerial);
+            delete(obj.myGui);
+            delete(obj);
             
         end
         
@@ -304,12 +297,9 @@ classdef SerialDataTool < handle
 
               disp(n_bytesavb);
               for i = 1 : n_bytesavb
-                obj.readProtocol;
+                %obj.readProtocol;
               end%end for
               
-              %refresh Terminal and Plot after every burstread
-              obj.myGui.refreshScreen;
-              obj.plotSample;
             end %end if
         end%end function
         
