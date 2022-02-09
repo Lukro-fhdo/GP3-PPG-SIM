@@ -21,16 +21,19 @@ classdef GUI < handle
         btn_sendData;
         btn_clearScreen
         btn_clearPlotter;
+        btn_recordData
         
         % Checkboxes
         cb_showASCII;
         cb_showSend;
+        cb_scrollBottom;
         
         % Textfields
         txa_outputWindow;
         txa_outputWindowText = {};
         txa_outputWindowIndex = 1;
         txa_inputForm;
+        txa_inputFileName;
         
         % Plotter
         ax_plot;
@@ -78,6 +81,7 @@ classdef GUI < handle
         evt_btn_disconnectSerialFcn;
         evt_btn_sendMsgFcn;
         evt_btn_sendDateFcn;
+        evt_btn_recordDataFcn
         
         evt_closeGuiFcn;
     end
@@ -112,6 +116,10 @@ classdef GUI < handle
                 case 'Cancel'
                     return
             end
+        end
+
+        function evt_btn_recordDataCBF(obj,~,~)
+            notify(obj,'evt_btn_recordDataFcn');
         end
         
         function evt_dd_portSelectCBF(obj,~,~)

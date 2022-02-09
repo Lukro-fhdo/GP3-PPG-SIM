@@ -30,10 +30,12 @@ function readProtocol(obj)
             obj.Buffer = circshift(obj.Buffer,-1);
             %overwrite last data on last array index (data filled in leftside)
             obj.Buffer(obj.Buffersize) = obj.tmp_Buffer;  
-            obj.tmp_Buffer =0;
+            
             %increment sample counter
             obj.n_xAxis = obj.n_xAxis + 1;
             obj.myGui.writeOnScreen(obj.tmp_Buffer,'DEC');
+            obj.saveToFile(obj.tmp_Buffer);
+            obj.tmp_Buffer =0;
             %obj.plotSample;
         end
 
@@ -50,7 +52,7 @@ function readProtocol(obj)
         case obj.HB_ERR
             obj.F_HEADERBYTE = msg;
         otherwise 
-           % obj.myGui.writeOnScreen(msg,'ASCII');
+            obj.myGui.writeOnScreen(msg,'ASCII');
         
     end%end switch
     end%end if

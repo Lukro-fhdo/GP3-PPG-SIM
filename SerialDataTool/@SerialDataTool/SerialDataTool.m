@@ -18,6 +18,7 @@ classdef SerialDataTool < handle
         F_CR = 0;
         F_ENDPKG = 0;
         SEND_DATA = 1;
+        RECORD_DATA = 0;
         
         %Plot Date
         tmp_Buffer = uint32(0);
@@ -40,6 +41,10 @@ classdef SerialDataTool < handle
         sd_length = 0;
         numBytes = 0;
         
+        %Record Data
+        rd_filename;
+        rd_Buffer ={}
+
         %Serial
         s_Port;
         s_Baud;
@@ -64,6 +69,7 @@ classdef SerialDataTool < handle
         L_btn_disconnectSerial;
         L_btn_sendMsg;
         L_btn_sendDate;
+        L_btn_recordData
         
         L_closeGui
     end
@@ -75,7 +81,7 @@ classdef SerialDataTool < handle
         function obj = SerialDataTool()
                         
             obj.myGui = GUI;
-            obj.SendTimer = Timer(50);
+            obj.SendTimer = Timer(25);
             obj.SendTimer.signalTimer.BusyMode = 'error';
             obj.SendTimer.signalTimer.ErrorFcn = @myerror;
             
@@ -112,6 +118,8 @@ classdef SerialDataTool < handle
             obj.L_btn_sendDate          = listener(obj.myGui,'evt_btn_sendDateFcn',@obj.gui_SendData);
             
             obj.L_closeGui              = listener(obj.myGui,'evt_closeGuiFcn',@obj.closeAll);
+
+            obj.L_btn_recordData        = listener(obj.myGui,'evt_btn_recordDataFcn',@obj.recordData);
         end
         
         function delete(obj)
@@ -119,14 +127,23 @@ classdef SerialDataTool < handle
         end
         
 %% Memberfunctions
+% external
         readProtocol(obj);
+        recordData(obj,~,~);
+
+
+% internal
+
+
         
         function closeAll(obj,~,~)
+            if ~isempty(timerfindall) 
             stop(timerfindall);
             delete(timerfindall);
-%             delete(obj.mySerial);
-%             delete(obj.myGui);
-%             delete(obj);
+             
+             %delete(obj.myGui);
+             delete(obj);
+            end
             
         end
         
@@ -140,7 +157,7 @@ classdef SerialDataTool < handle
         
         function gui_screenMsg(obj,msg)
             
-            obj.myGui.newLine;
+            %obj.myGui.newLine;
             obj.myGui.writelineOnScreen(msg);
             obj.myGui.newLine;
             obj.myGui.refreshScreen;
@@ -178,6 +195,10 @@ classdef SerialDataTool < handle
          
          function gui_DisconnectSerial(obj,~,~)
              if(obj.ReadTimer.stopTimer)
+
+                 if(obj.SendTimer.state == 1)
+                    obj.SendTimer.stopTimer;
+                 end
                  obj.mySerial.close;
                  obj.myGui.showDisconnected;
              end
@@ -249,7 +270,7 @@ classdef SerialDataTool < handle
              else
 
                 stop(obj.SendTimer.signalTimer);
-
+                %obj.SendTimer.stopTimer;
                 obj.SEND_DATA = 1;
                 
                 obj.myGui.btn_sendData.Text = 'Send Data';
@@ -302,7 +323,7 @@ classdef SerialDataTool < handle
             %disp(n_bytesavb);
             if n_bytesavb >0
 
-              disp(n_bytesavb);
+              %disp(n_bytesavb);
               for i = 1 : n_bytesavb
                 obj.readProtocol;
               end%end for

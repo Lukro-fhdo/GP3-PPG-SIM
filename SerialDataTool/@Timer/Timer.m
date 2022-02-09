@@ -6,6 +6,7 @@ classdef Timer < handle
         signalTimer;
         signalFs;
         signalT;
+        state=0;
         cycles
     end
     properties

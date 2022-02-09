@@ -13,5 +13,7 @@ function refreshScreen(obj)
         obj.txa_outputWindow.Value = obj.NUM_ARR;
 
     end
-    scroll(obj.txa_outputWindow,'bottom');
+    if obj.cb_scrollBottom.Value == 1
+        scroll(obj.txa_outputWindow,'bottom');
+    end
 end

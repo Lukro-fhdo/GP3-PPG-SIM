@@ -4,6 +4,7 @@ function  state = stopTimer(obj)
         
             stop(obj.signalTimer);
             delete(obj.signalTimer);
+            obj.state =0;
             state =1;
         end
     catch
